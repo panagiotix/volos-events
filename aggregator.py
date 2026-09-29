@@ -164,21 +164,30 @@ def region_category(t):
         if k in t: return c
     return "Άλλο"
 
+REGION_BASE = "https://app.thessaly.gov.gr"
+
 def collect_region():
-    out, rejected = [], []
-    pat = re.compile(r"\[(.+?) (\d{2})/(\d{2})/(\d{4}) - (\d{2})/(\d{2})/(\d{4}) (ΠΕ \S+) (.+?) Προβολή Εκδήλωσης\]\((\S+)\)")
-    for line in open(f"{SNAP}/thessaly_app.md", encoding="utf-8"):
-        m = pat.search(line)
-        if not m: continue
-        title, d1, m1, y1, d2, m2, y2, pe, rest, url = m.groups()
+    text = open(f"{SNAP}/thessaly_app.md", encoding="utf-8").read()
+    rows = []
+    live = re.compile(r"(\d{2})/(\d{2})/(\d{4}) - (\d{2})/(\d{2})/(\d{4})\s*\n(ΠΕ [^\n]+?)\s*\n([^\n]*)\n\s*\n([^\n]+)\n(.*?)Προβολή Εκδήλωσης\]\((\S+?)\)", re.S)
+    for d1, m1, y1, d2, m2, y2, pe, cat, title, desc, url in live.findall(text):
+        rows.append((title.strip(), d1, m1, y1, d2, m2, y2, pe.strip(), f"{cat} {re.sub(r'\s+', ' ', desc)}", url))
+    old = re.compile(r"\[(.+?) (\d{2})/(\d{2})/(\d{4}) - (\d{2})/(\d{2})/(\d{4}) (ΠΕ \S+) (.+?) Προβολή Εκδήλωσης\]\((\S+)\)")
+    if not rows:
+        rows = [m.groups() for m in old.finditer(text)]
+    out, rejected, seen = [], [], set()
+    for title, d1, m1, y1, d2, m2, y2, pe, rest, url in rows:
+        url = url if url.startswith("http") else REGION_BASE + url
+        if url in seen: continue
+        seen.add(url)
         if pe != "ΠΕ Μαγνησίας":
-            rejected.append({"title": title, "source": "Περιφέρεια", "reason": "Εκτός Μαγνησίας"}); continue
-        s, e = f"{y1}-{m1}-{d1}", f"{y2}-{m2}-{d2}"
+            continue                                       # other regional units: not ours (kept out of the log noise)
+        s0, e0 = f"{y1}-{m1}-{d1}", f"{y2}-{m2}-{d2}"
         low = fold(rest)
         place = ("Αγριά" if "αγρια" in low else "Λόφος Γορίτσας, Βόλος" if "γοριτσ" in low else
                  "Μακρυράχη, Πήλιο" if "μακρυραχ" in low else "Χιονοδρομικό Κέντρο Πηλίου" if "χιονοδρομ" in low else
                  "Βόλος" if "βολο" in low else "")
-        out.append(rec("Περιφέρεια", url, title, s, e if e != s else None, None, place,
+        out.append(rec("Περιφέρεια", url, title, s0, e0 if e0 != s0 else None, None, place,
                        category=region_category(title + " " + rest), context=f"{title} {rest}", note=CONFLICTS.get(url)))
     return out, rejected
 
@@ -197,18 +206,39 @@ def collect_uth():
         out.append(rec("ΠΘ /events", url, title, start, end, None, venue, category=cat, context=f"{title} {snippet}"))
     return out
 
+TS_BASE = "https://www.ticketservices.gr"
+DATE_RX = r"(\d{1,2}) (\S+) (\d{4})"
+
 def collect_ticketservices():
+    text = open(f"{SNAP}/ticketservices.md", encoding="utf-8").read()
+    cards = []
+    if "#####" in text:                                   # live page: one card per "* [![" block
+        for block in re.split(r"\n\* \[!\[", text):
+            m = re.search(r"#####\s*(.+?)\*(.+?)\*\]\((\S+?)\)", block)
+            if not m: continue
+            head = block[:m.start()]
+            cards.append((head, m.group(1), m.group(2), m.group(3)))
+    else:                                                 # saved snapshot: "[dates TITLE*VENUE*](url)"
+        for line in text.splitlines():
+            m = re.search(r"\[(.+?)\*(.+?)\*\]\((\S+)\)", line)
+            if not m: continue
+            dates = list(re.finditer(DATE_RX, m.group(1)))
+            if not dates: continue
+            cards.append((m.group(1)[:dates[-1].end()], m.group(1)[dates[-1].end():], m.group(2), m.group(3)))
     out = []
-    for line in open(f"{SNAP}/ticketservices.md", encoding="utf-8"):
-        m = re.search(r"\[(.+?)\*(.+?)\*\]\((\S+)\)", line)
-        if not m: continue
-        head, venue, url = m.groups()
-        dates = list(re.finditer(r"(\d{1,2}) (\S+) (\d{4})", head))
+    for head, title, venue, url in cards:
+        dates = [d for d in re.finditer(DATE_RX, head) if fold(d.group(2)) in MONTHS]
         if not dates: continue
-        title = head[dates[-1].end():].strip(" -")
-        s = mk_date(*dates[0].groups()); e = mk_date(*dates[-1].groups()) if len(dates) > 1 else None
-        cat = "Μουσική" if re.search(r"VIVALDI|STRAUSS|συναυλ", head, re.I) else "Θέατρο"
-        out.append(rec("TicketServices", url, title, s, e, None, venue, category=cat, context=f"{title} {venue}"))
+        running = "απο " in fold(head[:dates[0].start()+5]) or fold(head).strip().startswith("απο")
+        s0 = mk_date(*dates[0].groups()); e0 = mk_date(*dates[-1].groups()) if len(dates) > 1 else None
+        venue = venue.replace("<br>", " ")
+        if not (match_venue(venue) or classify(venue) in ("volos", "pelion")):
+            continue                                       # other cities: silently skipped
+        url = url if url.startswith("http") else TS_BASE + url
+        title = title.strip(" -")
+        cat = "Μουσική" if re.search(r"VIVALDI|STRAUSS|συναυλ|ορχήστρ", title, re.I) else "Θέατρο"
+        r = rec("TicketServices", url, title, s0, e0, None, venue, category=cat, context=f"{title} {venue}")
+        out.append(r)
     return out
 
 def collect_more():
@@ -286,13 +316,14 @@ def collect_aogoc():
 
 def collect_zagora():
     text = open(f"{SNAP}/zagora_calendar.md", encoding="utf-8").read()
-    pat = re.compile(r"### (.+?)\n\[\S+ (\d{2})/(\d{2})/(\d{4}) - (\d{2}:\d{2})(?: έως \S+ (\d{2})/(\d{2})/(\d{4}) - \d{2}:\d{2})?\]\((\S+)\)")
+    pat = re.compile(r"### (.+?)\n\s*\[\S+ (\d{2})/(\d{2})/(\d{4}) - (\d{2}:\d{2})(?: έως (?:\S+ (\d{2})/(\d{2})/(\d{4}) - )?\d{2}:\d{2})?\]\((\S+?)(?: \"[^\"]*\")?\)")
     out = []
     for title, d, m, y, t, d2, m2, y2, url in pat.findall(text):
         end = f"{y2}-{m2}-{d2}" if d2 else None
         low = fold(title)
         cat = ("Φεστιβάλ" if "φεστιβαλ" in low or "festival" in low else "Γαστρονομία" if "γιορτη" in low or "προιοντ" in low
                else "Εκθέσεις" if "εκθεση" in low else "Άλλο")
+        url = url if url.startswith("http") else "https://www.dimos-zagoras-mouresiou.gr" + url
         out.append(rec("Δήμος Ζαγοράς", url, title, f"{y}-{m}-{d}", end if end != f"{y}-{m}-{d}" else None,
                        None if t == "00:00" else t, "Ζαγορά-Μούρεσι, Πήλιο", category=cat, context=f"{title} Πήλιο"))
     return out

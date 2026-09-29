@@ -35,7 +35,8 @@ jobs:
 
       - name: Log στη σύνοψη της εκτέλεσης
         if: always()
-        run: cat log.md >> "$GITHUB_STEP_SUMMARY" || true
+        run: |
+          { echo '### Λήψεις'; echo '```'; cat live/_fetch.log; echo '```'; cat log.md; } >> "$GITHUB_STEP_SUMMARY" || true
 
       - uses: actions/upload-pages-artifact@v3
         with:

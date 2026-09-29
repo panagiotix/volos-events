@@ -22,6 +22,12 @@ PAGES = {
     "ticketservices.md":   "https://www.ticketservices.gr/",
     "fever_volos.md":      "https://feverup.com/el/volos-ellada",
     "zagora_calendar.md":  "https://www.dimos-zagoras-mouresiou.gr/fullcalendar",
+    # downloaded so their live format can be inspected; parsers follow in the next round
+    "raw_mood_volos.md":     "https://events.musicofourdesire.com/events/Volos",
+    "raw_public_tickets.md": "https://tickets.public.gr/gr-el/tickets/",
+    "raw_more_tickets.md":   "https://www.more.com/gr-el/tickets/",
+    "raw_aogoc_volos.md":    "https://allofgreeceone.culture.gov.gr/en/?s=volos",
+    "raw_public_tour_fisfis.md": "https://tickets.public.gr/gr-el/tickets/standupcomedy/lampros-fisfis-poly-kalytera-tora-on-tour/",
 }
 _robots = {}
 
@@ -49,17 +55,21 @@ def to_text(html):
 def main():
     os.makedirs(OUT, exist_ok=True)
     ok = 0
+    log = open(f"{OUT}/_fetch.log", "w", encoding="utf-8")
+    def note(msg):
+        print(msg); log.write(msg + "\n")
     for fname, url in PAGES.items():
         if not allowed(url):
-            print(f"robots.txt: {url} — παραλείπεται"); continue
+            note(f"ROBOTS {fname:24} το robots.txt απαγορεύει: {url}"); continue
         try:
             text = to_text(get(url))
             open(f"{OUT}/{fname}", "w", encoding="utf-8").write(text)
-            print(f"OK  {fname:24} {len(text):>7} χαρακτήρες  ← {url}"); ok += 1
+            note(f"OK     {fname:24} {len(text):>7} χαρακτήρες  ← {url}"); ok += 1
         except Exception as ex:
-            print(f"ERR {fname:24} {type(ex).__name__}: {ex}")
+            note(f"ERR    {fname:24} {type(ex).__name__}: {ex}  ← {url}")
         time.sleep(2)                                    # polite pause between sites
-    print(f"{ok}/{len(PAGES)} σελίδες κατέβηκαν")
+    note(f"{ok}/{len(PAGES)} σελίδες κατέβηκαν")
+    log.close()
     return 0
 
 if __name__ == "__main__":
