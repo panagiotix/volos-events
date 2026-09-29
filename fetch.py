@@ -4,7 +4,7 @@ the form the parsers in aggregator.py read). Respects robots.txt; identifies its
 
 Exit code 1 when most downloads fail, so the workflow stops and the previous page stays online.
 """
-import os, re, shutil, sys, time, urllib.error, urllib.request, urllib.robotparser
+import http.cookiejar, os, re, shutil, sys, time, urllib.error, urllib.request, urllib.robotparser
 from urllib.parse import urlparse
 from markdownify import markdownify
 
@@ -72,9 +72,13 @@ def robots_for(url):
     return res
 
 # ---------------------------------------------------------------- download
+# some pages (Public.gr tours) set a session cookie and redirect (302) to themselves:
+# without a cookie jar that is an endless redirect, so we keep cookies for the run
+_OPENER = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+
 def get(url):
     req = urllib.request.Request(url, headers=HEADERS)
-    with urllib.request.urlopen(req, timeout=30) as r:
+    with _OPENER.open(req, timeout=30) as r:
         return r.read().decode(r.headers.get_content_charset() or "utf-8", "replace")
 
 def why_blocked(ex):
