@@ -295,7 +295,11 @@ function renderList(){
 
 
 
-document.querySelectorAll(".gen").forEach(s=>{const d=new Date(DATA.generated+"T12:00");s.textContent=`${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;});
+document.querySelectorAll(".gen").forEach(s=>{
+  const u = DATA.updated || (DATA.generated+"T12:00");
+  const d = new Date(u);
+  s.textContent = `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}` + (DATA.updated ? `, ${u.slice(11,16)}` : "");
+});
 renderStats(); renderTabs(); renderFilters(); renderList();
 
 /* ================= Υποβολές & διαχείριση (db + user) ================= */

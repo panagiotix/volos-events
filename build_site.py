@@ -11,6 +11,13 @@ if len(real) < 10:
     print(f"Μόνο {len(real)} εκδηλώσεις (χωρίς τις ταινίες): πιθανή αποτυχία λήψεων. "
           "Δεν δημοσιεύεται, μένει η προηγούμενη σελίδα.")
     sys.exit(1)
+from datetime import datetime
+try:
+    from zoneinfo import ZoneInfo                    # Python 3.9+
+    now = datetime.now(ZoneInfo("Europe/Athens"))
+except ImportError:                                   # Python 3.8: local time (the workflow sets TZ=Europe/Athens)
+    now = datetime.now()
+data["updated"] = now.strftime("%Y-%m-%dT%H:%M")
 venues = [{"name": n, "aliases": a} for n, a in VENUES.values()]
 html = open(f"{HERE}/page_template.html", encoding="utf-8").read()
 html = html.replace("__DATA__", json.dumps(data, ensure_ascii=False)).replace("__VENUES__", json.dumps(venues, ensure_ascii=False))
