@@ -1,0 +1,5 @@
+{
+  "_comment": "Χειροκίνητες αποφάσεις από την ουρά ελέγχου. key -> {area: volos|pelion|reject, note}",
+  "rally-kentavros": {"match_url": "https://app.thessaly.gov.gr/TourismEventsApp/Events/Details/341",
+                      "area": "pelion", "note": "Επιβεβαιώθηκε χειροκίνητα: διεξάγεται στο Πήλιο."}
+}

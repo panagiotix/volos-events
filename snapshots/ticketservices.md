@@ -1,0 +1,7 @@
+- [Τετάρτη 30 Σεπτεμβρίου 2026 «30 χρόνια ΜΙΚΡΗ ΠΑΤΡΙΔΑ»*ΔΗΜΟΤΙΚΟ ΩΔΕΙΟ ΛΑΡΙΣΑΣ*](https://www.ticketservices.gr/event/larisa-30-xronia-mikri-patrida/?lang=el)
+- [Κυριακή 04 Οκτωβρίου 2026 (Α)γνώστου Πατρός Η ΚΡΥΦΗ ΚΑΣΕΤΑ*Κέντρο Πολιτισμού & Τέχνων «Θεατρίνη» ΒΟΛΟΣ*](https://www.ticketservices.gr/event/agnostou-patros-volos/?lang=el)
+- [Σάββατο 10 Οκτωβρίου 2026 -Κυριακή 11 Οκτωβρίου 2026 (Α)ΓΝΩΣΤΟΥ ΠΑΤΡΟΣ Η ΚΡΥΦΗ ΚΑΣΕΤΑ*ΓΡΑΜΜΕΣ ΤΕΧΝΗΣ - ΠΑΤΡΑ*](https://www.ticketservices.gr/event/agnostou-patros-patra/?lang=el)
+- [Σάββατο 10 Οκτωβρίου 2026 VIVALDI 4 Εποχές*ΔΗΜΟΤΙΚΟ ΘΕΑΤΡΟ ΒΟΛΟΥ «ΒΑΓΓΕΛΗΣ ΠΑΠΑΘΑΝΑΣΙΟΥ»*](https://www.ticketservices.gr/event/dimos-volou-vivaldi/?lang=el)
+- [Σάββατο 24 Οκτωβρίου 2026 -Κυριακή 25 Οκτωβρίου 2026 ΜΙΣΗ ΠΑΤΡΙΔΑ*Κέντρο Πολιτισμού & Τέχνων «Θεατρίνη» ΒΟΛΟΣ*](https://www.ticketservices.gr/event/misi-patrida-volos/?lang=el)
+- [Σάββατο 14 Νοεμβρίου 2026 -Κυριακή 15 Νοεμβρίου 2026 «Τα κορίτσια δεν πρέπει να παίζουν ποδόσφαιρο»*Κέντρο Πολιτισμού & Τέχνων «Θεατρίνη» ΒΟΛΟΣ*](https://www.ticketservices.gr/event/volos-ta-koritsia-den-prepei-na-paizoyn-podosfairo/?lang=el)
+- [Σάββατο 12 Δεκεμβρίου 2026 «ΑΥΤΟΚΡΑΤΟΡΙΚΗ ΒΙΕΝΝΗ & ΒΙΕΝΝΕΖΙΚΑ ΒΑΛΣ» JOHANN STRAUSS VIRTUOSI*ΔΗΜΟΤΙΚΟ ΘΕΑΤΡΟ ΒΟΛΟΥ «ΒΑΓΓΕΛΗΣ ΠΑΠΑΘΑΝΑΣΙΟΥ»*](https://www.ticketservices.gr/event/johann-strauss-virtuosi-autokratoriki-vienni-kai-viennezika-vals-volos/?lang=el)

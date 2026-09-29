@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel><title>Δοκιμαστικός χώρος</title>
+<item><title>Live με τους Test Band</title><link>https://example.org/n1</link>
+<description>Την Παρασκευή 16 Οκτωβρίου στις 21:30 στο Cafe Santan.</description><pubDate>Mon, 28 Sep 2026 10:00:00 +0300</pubDate></item>
+<item><title>Παρουσίαση βιβλίου 24/10</title><link>https://example.org/n2</link>
+<description>Ώρα 19:00, αίθουσα του συλλόγου στη Νέα Ιωνία.</description><pubDate>Tue, 29 Sep 2026 09:00:00 +0300</pubDate></item>
+<item><title>Ευχαριστούμε όσους ήρθαν χθες</title><link>https://example.org/n3</link>
+<description>Ήταν μια υπέροχη βραδιά.</description><pubDate>Tue, 29 Sep 2026 12:00:00 +0300</pubDate></item>
+</channel></rss>

@@ -1,0 +1,6 @@
+live/
+_site/
+output.json
+events.ics
+log.md
+__pycache__/

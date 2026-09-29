@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="el">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Τι γίνεται στον Βόλο και στο Πήλιο</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=GFS+Didot&family=Commissioner:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F5F7F7; --ink:#15222C; --muted:#5A6B76; --gulf:#1D4F7A; --pelion:#3C6A4C; --kiln:#C9962E;
+  --line:#D6DEE2; --panel:#FFFFFF;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+  --paper:#0F1A22; --ink:#E6ECEF; --muted:#93A4AE; --gulf:#7FB0DA; --pelion:#8DBE98; --kiln:#E2B85A;
+  --line:#243542; --panel:#15232D; } }
+:root[data-theme="dark"]{ --paper:#0F1A22; --ink:#E6ECEF; --muted:#93A4AE; --gulf:#7FB0DA; --pelion:#8DBE98; --kiln:#E2B85A; --line:#243542; --panel:#15232D; }
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.55 Commissioner,"Segoe UI",Arial,sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding:40px 20px 64px}
+h1{font:400 clamp(44px,8vw,84px)/1 "GFS Didot","Times New Roman",serif;margin:0 0 14px;color:var(--gulf);letter-spacing:-.01em}
+.lede{max-width:60ch;color:var(--muted);margin:0 0 28px}
+.stats{display:flex;flex-wrap:wrap;gap:8px 28px;margin:0 0 30px;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:15px}
+.stats b{font-weight:600;color:var(--ink)}
+.tabs{display:flex;gap:0;margin:0 0 22px;border-bottom:2px solid var(--line)}
+.tab{font:400 26px/1 "GFS Didot",serif;background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-2px;padding:8px 18px 10px;color:var(--muted);cursor:pointer}
+.tab[aria-selected="true"]{color:var(--gulf);border-bottom-color:var(--kiln)}
+.tab .c{font:500 13px Commissioner,sans-serif;margin-left:6px;vertical-align:4px}
+.empty{color:var(--muted);padding:18px 0;border-top:1px solid var(--line)}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:28px}
+.chip{font:500 14px Commissioner,sans-serif;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:999px;padding:6px 14px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--gulf);border-color:var(--gulf);color:var(--paper)}
+.chip:focus-visible,button:focus-visible,textarea:focus-visible{outline:2px solid var(--kiln);outline-offset:2px}
+.day{display:grid;grid-template-columns:96px 1fr;gap:0 24px;padding:18px 0;border-top:1px solid var(--line)}
+.date{font-family:"GFS Didot",serif;line-height:1}
+.date .n{font-size:56px;color:var(--gulf)}
+.date .m{display:block;font-family:Commissioner,sans-serif;font-size:13px;color:var(--muted);margin-top:4px}
+.ev{padding:4px 0 14px}
+.ev + .ev{border-top:1px dashed var(--line);padding-top:14px}
+.ev h3{margin:0 0 4px;font-size:19px;font-weight:600;line-height:1.3}
+.meta{color:var(--muted);font-size:14.5px}
+.cat{color:var(--pelion);font-weight:500}
+.srcs{margin-top:6px;font-size:13.5px;color:var(--muted)}
+.srcs a{color:var(--gulf)}
+.multi{color:var(--kiln);font-weight:600}
+.lowconf{font-size:13px;color:var(--kiln)}
+.new{display:inline-block;font-size:12px;font-weight:600;background:var(--kiln);color:#15222C;border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:2px}
+.try{margin-top:56px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:24px}
+.try h2{font:400 32px/1.1 "GFS Didot",serif;margin:0 0 8px;color:var(--gulf)}
+.try p{margin:0 0 14px;color:var(--muted);max-width:62ch}
+textarea{width:100%;min-height:130px;font:15px/1.5 Commissioner,sans-serif;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px;resize:vertical}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}
+.btn{font:600 15px Commissioner,sans-serif;background:var(--gulf);color:var(--paper);border:0;border-radius:8px;padding:10px 18px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--gulf);border:1px solid var(--line)}
+.btn:disabled{opacity:.55;cursor:wait}
+#status{font-size:14px;color:var(--muted)}
+pre{overflow-x:auto;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px;font-size:13px;margin:14px 0 0}
+.tba h2,.panel h2{font:400 30px/1.1 "GFS Didot",serif;color:var(--gulf);margin:48px 0 6px}
+.panel p.sub{color:var(--muted);margin:0 0 14px;max-width:62ch}
+.tierh{font-weight:600;margin:22px 0 4px;color:var(--gulf)}
+.srcrow{display:grid;grid-template-columns:110px 1fr;gap:4px 16px;padding:12px 0;border-top:1px solid var(--line)}
+.st{font-size:13px;font-weight:600;border-radius:4px;padding:2px 8px;justify-self:start;height:fit-content}
+.st.ok{background:color-mix(in srgb,var(--pelion) 18%,transparent);color:var(--pelion)}
+.st.stale,.st.directory,.st.js,.st.pdf,.st.notfound,.st.sparse,.st.irrelevant,.st.removed{background:color-mix(in srgb,var(--kiln) 20%,transparent);color:var(--ink)}
+.st.blocked,.st.robots,.st.dead{background:color-mix(in srgb,#B3413A 18%,transparent);color:#B3413A}
+.srcrow b{font-weight:600}.srcrow a{color:var(--gulf);font-size:14px;word-break:break-all}
+.srcrow .d{color:var(--muted);font-size:14.5px}
+details{border-top:1px solid var(--line);padding:12px 0}
+summary{cursor:pointer;font-weight:600}
+.rej{padding:8px 0;border-bottom:1px dashed var(--line);font-size:15px}
+.revgrp{font-weight:600;margin:18px 0 4px;color:var(--gulf)}
+.revrow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-top:1px dashed var(--line);flex-wrap:wrap}
+.revrow .t{flex:1 1 280px;min-width:0}
+.revrow .m{color:var(--muted);font-size:13.5px}
+.revrow .b{display:flex;gap:6px;flex-wrap:wrap}
+.revrow button{font:500 13px Commissioner,sans-serif;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:5px 11px;cursor:pointer}
+.revrow button:hover{border-color:var(--gulf)}
+.revrow button:focus-visible{outline:2px solid var(--kiln);outline-offset:2px}
+.revrow.done{opacity:.55}
+.revrow .dec{font-size:13px;font-weight:600;color:var(--gulf)}
+.revcount{font-size:14px;color:var(--muted)}
+#exp{width:100%;font:13px/1.4 ui-monospace,monospace;margin-top:8px;border:1px solid var(--line);border-radius:6px;padding:8px;background:var(--bg);color:var(--ink)}
+.badge{display:inline-block;font:600 11px Commissioner,sans-serif;letter-spacing:.03em;text-transform:uppercase;color:var(--gulf);border:1px solid currentColor;border-radius:4px;padding:1px 5px;margin-left:8px;vertical-align:3px}
+.arch{margin-top:26px}
+.arch summary{font:400 26px/1.2 "GFS Didot",serif;color:var(--gulf);cursor:pointer}
+.archyr{font-weight:600;margin:16px 0 4px;color:var(--muted)}
+.archrow{display:grid;grid-template-columns:120px 1fr;gap:10px;padding:7px 0;border-top:1px dashed var(--line);font-size:15px}
+.archrow .d{color:var(--muted);font-variant-numeric:tabular-nums}
+.live.done .lbl{color:var(--muted)}
+.rej span{color:var(--muted)}
+.how{font-size:12.5px;color:var(--muted);margin-left:6px}
+.ev{display:grid;grid-template-columns:1fr auto;gap:4px 18px;align-items:start}
+.ev>.body{min-width:0}
+.live{min-width:132px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;text-align:left;background:var(--panel);font-size:13px;line-height:1.35}
+.live .lbl{display:flex;align-items:center;gap:6px;font-weight:600;letter-spacing:.03em;font-size:12px;text-transform:uppercase;color:var(--muted)}
+.live .big{font-weight:600;font-size:15px;color:var(--ink);margin-top:2px}
+.live .sub{color:var(--muted);font-size:12.5px}
+.live .bar{height:4px;border-radius:2px;background:var(--line);margin-top:6px;overflow:hidden}
+.live .bar i{display:block;height:100%;background:var(--kiln)}
+.live.on{border-color:#C0392B}
+.live.on .lbl{color:#C0392B}
+.live.today{border-color:var(--kiln)} .live.today .lbl{color:var(--kiln)}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor;display:inline-block}
+@media (prefers-reduced-motion:no-preference){.live.on .dot{animation:pulse 1.4s ease-in-out infinite}@keyframes pulse{50%{opacity:.25;transform:scale(.7)}}}
+@media (max-width:560px){.ev{grid-template-columns:1fr}.live{justify-self:start}}
+.onwrap{margin:0 0 8px}
+.onwrap h2,.cinema h2{font:400 30px/1.1 "GFS Didot",serif;color:var(--gulf);margin:28px 0 10px}
+.cin-days{display:flex;gap:8px;margin:0 0 14px}
+.cin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.hall{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--panel)}
+.hall h3{margin:0 0 2px;font-size:18px}
+.hall .kind{color:var(--muted);font-size:13px;margin-bottom:8px}
+.film{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px dashed var(--line);font-size:15px}
+.film .t{white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--gulf);font-weight:600}
+.actions{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:6px 0 18px}
+.cta{font:600 15px Commissioner,sans-serif;background:var(--gulf);color:#fff;border:0;border-radius:999px;padding:10px 18px;cursor:pointer}
+.cta.ghost{background:transparent;color:var(--gulf);border:1px solid var(--gulf)}
+.cta:focus-visible,.kinds button:focus-visible,.fbtn:focus-visible{outline:2px solid var(--kiln);outline-offset:2px}
+.adminlink{font-weight:600;color:var(--kiln)}
+.kinds{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 16px}
+.kinds button{font:500 14px Commissioner,sans-serif;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:7px 14px;cursor:pointer}
+.kinds button[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px 16px}
+.fgrid .wide{grid-column:1/-1}
+.fld label{display:block;font-size:13.5px;font-weight:600;margin-bottom:4px}
+.fld .hint{font-size:12.5px;color:var(--muted);margin-top:3px}
+.fld input,.fld select,.fld textarea{width:100%;box-sizing:border-box;font:15px Commissioner,sans-serif;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+.fld input:focus,.fld select:focus,.fld textarea:focus{outline:2px solid var(--gulf);outline-offset:0}
+.fld .row{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:15px}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.dupe{border-left:3px solid var(--kiln);padding:8px 12px;background:color-mix(in srgb,var(--kiln) 8%,transparent);font-size:14px;margin-top:12px}
+.formmsg{font-size:14px;margin-top:10px}
+.formmsg.err{color:#B3261E}
+.fbtn{margin-top:16px}
+.sitem{display:grid;grid-template-columns:1fr auto;gap:6px 14px;padding:12px 0;border-top:1px dashed var(--line)}
+.sitem .k{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600}
+.sitem .m{font-size:13.5px;color:var(--muted);word-break:break-word}
+.st2{font:600 12px Commissioner,sans-serif;border-radius:4px;padding:2px 7px;align-self:start;white-space:nowrap}
+.st2.pending{background:color-mix(in srgb,var(--kiln) 18%,transparent);color:var(--ink)}
+.st2.approved{background:color-mix(in srgb,#2E7D32 20%,transparent);color:var(--ink)}
+.st2.rejected{background:color-mix(in srgb,#B3261E 18%,transparent);color:var(--ink)}
+.adm{border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:12px 0;background:var(--panel)}
+.adm .ed{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:10px 0}
+.adm .ed input,.adm .ed select{font:14px Commissioner,sans-serif;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);width:100%;box-sizing:border-box}
+.adm .ed label{font-size:12px;color:var(--muted)}
+.adm .btns{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.adm .btns input{flex:1 1 200px;font:14px Commissioner,sans-serif;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+.admfoot{margin-top:16px}
+.note{margin-top:40px;font-size:14px;color:var(--muted);max-width:70ch}
+@media (max-width:560px){ .day{grid-template-columns:64px 1fr;gap:0 14px} .date .n{font-size:40px} }
+@media (prefers-reduced-motion:no-preference){ .ev.fresh{animation:glow 1.6s ease-out} @keyframes glow{from{background:color-mix(in srgb,var(--kiln) 25%,transparent)}to{background:transparent}} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Τι γίνεται στον Βόλο</h1>
+  <p class="lede">Πρωτότυπο που μαζεύει αυτόματα εκδηλώσεις για τον Βόλο και το Πήλιο, μόνο από δομημένες πηγές (πλατφόρμες εκδηλώσεων, εισιτηρίων, Περιφέρεια, Πανεπιστήμιο), χωρίς τεχνητή νοημοσύνη. Ενημέρωση: <span class="gen"></span>.</p>
+  <div class="stats" id="stats"></div>
+  <div class="actions"><button type="button" class="cta" id="openSubmit" hidden>＋ Πρόσθεσε εκδήλωση ή πηγή</button><a href="#admin" id="adminLink" class="adminlink" hidden></a></div>
+  <div class="tabs" role="tablist" id="tabs"></div>
+  <div class="filters" id="filters" role="group" aria-label="Κατηγορίες"></div>
+  <section class="onwrap" id="onWrap" hidden><h2>Σε εξέλιξη τώρα</h2><div id="onList"></div></section>
+  <div id="list"></div>
+  <section class="cinema" id="nowWrap"><h2>Σινεμά</h2><div class="cin-days" id="cinDays"></div><div class="cin-grid" id="now"></div></section>
+  <section class="tba" id="tbaWrap"><h2>Χωρίς ακριβή ημερομηνία</h2><div id="tba"></div></section>
+
+  <section class="panel" id="submit" hidden>
+    <h2>Πρόσθεσε εκδήλωση ή πηγή</h2>
+    <p class="sub">Κάθε υποβολή ελέγχεται από τον διαχειριστή πριν δημοσιευτεί.</p>
+    <div class="kinds" role="tablist" id="kinds">
+      <button type="button" role="tab" data-k="event" aria-selected="true">Μία εκδήλωση</button>
+      <button type="button" role="tab" data-k="ical">Ημερολόγιο (iCal)</button>
+      <button type="button" role="tab" data-k="rss">RSS feed</button>
+      <button type="button" role="tab" data-k="site">Ιστοσελίδα</button>
+    </div>
+    <div id="formBody"></div>
+    <div id="formMsg" class="formmsg" role="status" aria-live="polite"></div>
+  </section>
+  <section class="panel" id="mine" hidden><h2>Οι υποβολές σου</h2><div id="mineList"></div></section>
+  <section class="panel" id="admin" hidden>
+    <h2>Διαχείριση υποβολών</h2>
+    <div class="kinds" id="admTabs"></div>
+    <div id="admList"></div>
+    <div class="admfoot"><button type="button" class="cta ghost" id="exportBtn">Εξαγωγή εγκεκριμένων για το pipeline (submissions.json)</button> <span id="exportMsg" class="formmsg"></span></div>
+  </section>
+
+  <p class="note">Τελευταία ενημέρωση: <span class="gen"></span>. Ελέγξτε πάντα την αρχική πηγή πριν από μια εκδήλωση: ώρες και χώροι μπορεί να αλλάξουν.</p>
+</div>
+
+<script>
+const DATA = __DATA__;
+let EVENTS = DATA.events;
+const VENUES = __VENUES__;
+const MONTHS = ["Ιαν","Φεβ","Μαρ","Απρ","Μαΐ","Ιουν","Ιουλ","Αυγ","Σεπ","Οκτ","Νοε","Δεκ"];
+const DAYS = ["Κυριακή","Δευτέρα","Τρίτη","Τετάρτη","Πέμπτη","Παρασκευή","Σάββατο"];
+let active = "Όλες", freshId = null, area = "volos";
+const AREAS = {volos:"Βόλος", pelion:"Πήλιο"};
+
+function esc(s){return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+
+function renderStats(){
+  const cur = EVENTS.filter(e=>!e.running&&!e.hall);
+  const merged = EVENTS.filter(e=>e.sources.length>1).length;
+  document.getElementById("stats").innerHTML =
+    `<span><b>${cur.length}</b> εκδηλώσεις</span><span><b>${EVENTS.filter(e=>e.running||e.hall).length}</b> ταινίες και προβολές</span><span><b>${merged}</b> επιβεβαιωμένες από πολλές πηγές</span>`;
+}
+function renderTabs(){
+  const tb=document.getElementById("tabs");
+  tb.innerHTML=Object.entries(AREAS).map(([k,v])=>`<button class="tab" role="tab" aria-selected="${k===area}" data-a="${k}">${v}<span class="c">${EVENTS.filter(e=>e.area===k&&!e.running&&!e.hall).length}</span></button>`).join("");
+  tb.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{area=b.dataset.a;active="Όλες";renderTabs();renderFilters();renderList();});
+}
+function renderFilters(){
+  const cats = ["Όλες", ...new Set(EVENTS.filter(e=>e.area===area).map(e=>e.category))];
+  const f = document.getElementById("filters");
+  f.innerHTML = cats.map(c=>`<button class="chip" aria-pressed="${c===active}" data-c="${esc(c)}">${esc(c)}</button>`).join("");
+  f.querySelectorAll(".chip").forEach(b=>b.onclick=()=>{active=b.dataset.c;renderFilters();renderList();});
+}
+
+const DAY=86400000;
+const TODAY=(()=>{const n=new Date();return new Date(n.getFullYear(),n.getMonth(),n.getDate());})();
+const D=s=>{const [y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d);};
+const fmt=s=>{const x=D(s);return `${x.getDate()} ${MONTHS[x.getMonth()]}`;};
+const diff=s=>Math.round((D(s)-TODAY)/DAY);
+function isOn(e){return e.start&&e.end&&diff(e.start)<=0&&diff(e.end)>=0;}
+function liveBox(e){
+  if(!e.start) return `<div class="live"><div class="lbl">Ημερομηνία</div><div class="big">Αναμένεται</div><div class="sub">δεν έχει ανακοινωθεί</div></div>`;
+  const s=diff(e.start), last=e.end?diff(e.end):s, days=last-s+1;
+  if(last<0) return `<div class="live done"><div class="lbl">Ολοκληρώθηκε</div><div class="big">${fmt(e.end||e.start)}</div><div class="sub">πριν από ${-last} ${-last===1?"μέρα":"μέρες"}</div></div>`;
+  const span = e.end ? `${fmt(e.start)} → ${fmt(e.end)} · ${days} ημέρες` : `Μόνο ${fmt(e.start)}${e.time?" · "+e.time:""}`;
+  if(s<=0 && last>=0 && e.end){
+    const pct=Math.round(((-s)+1)/days*100);
+    const left = last===0 ? "Τελευταία μέρα σήμερα" : `Έως ${fmt(e.end)} · ${last===1?"1 μέρα":last+" μέρες"} ακόμα`;
+    return `<div class="live on"><div class="lbl"><span class="dot"></span>Σε εξέλιξη</div><div class="big">${left}</div><div class="bar"><i style="width:${pct}%"></i></div></div>`;
+  }
+  if(s===0) return `<div class="live today"><div class="lbl"><span class="dot"></span>Σήμερα</div><div class="big">${e.time||"όλη μέρα"}</div><div class="sub">${span}</div></div>`;
+  if(s===1) return `<div class="live today"><div class="lbl">Αύριο</div><div class="big">${e.time||fmt(e.start)}</div><div class="sub">${span}</div></div>`;
+  return `<div class="live"><div class="lbl">Σε ${s} μέρες</div><div class="big">${fmt(e.start)}${e.time?" · "+e.time:""}</div><div class="sub">${e.end?"έως "+fmt(e.end)+" · "+days+" ημέρες":"μία μέρα"}</div></div>`;
+}
+function evHTML(e){
+  const time = e.time || "";
+  const end = e.end ? `έως ${new Date(e.end+"T12:00").getDate()} ${MONTHS[new Date(e.end+"T12:00").getMonth()]}` : "";
+  const when = [time, end].filter(Boolean).join(", ");
+  const price = e.price==null ? "" : (e.price==="0" ? " Ελεύθερη είσοδος." : ` ${esc(e.price)} €.`);
+  const multi = e.sources.length>1 ? `<span class="multi">Βρέθηκε σε ${e.sources.length} πηγές:</span> ` : "Πηγή: ";
+  return `<div class="ev ${e.id===freshId?"fresh":""}"><div class="body"><h3>${esc(e.title)}${e.fresh?'<span class="new">νέο</span>':""}${e.manual?'<span class="badge">επιβεβαιωμένο</span>':""}${e.submitted?'<span class="badge">υποβολή</span>':""}${e.restored?'<span class="badge">επαναφορά</span>':""}</h3>
+    <div class="meta">${e.date_text?esc(e.date_text)+". ":""}${esc(e.venue||"χώρος άγνωστος")}.${price} <span class="cat">${esc(e.category||"")}</span></div>
+    ${e.note?`<div class="meta">${esc(e.note)}</div>`:""}
+    <div class="srcs">${multi}${e.sources.map(s=>`<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.source)}</a>`).join(", ")}<span class="how">εξαγωγή: ${esc(e.method)}</span></div></div>${liveBox(e)}</div>`;
+}
+let cinDay=null;
+function renderCinema(pick){
+  const films = EVENTS.filter(e=>e.running&&pick(e)&&e.showtimes);
+  const screenings = EVENTS.filter(e=>e.hall&&pick(e)&&e.start&&diff(e.end||e.start)>=0).sort((a,b)=>a.start.localeCompare(b.start));
+  const wrap=document.getElementById("nowWrap");
+  wrap.hidden = !films.length && !screenings.length; if(wrap.hidden) return;
+  const days=[...new Set(films.flatMap(f=>Object.keys(f.showtimes)))].sort().filter(d=>diff(d)>=0);
+  if(!days.includes(cinDay)) cinDay=days[0];
+  const lab=d=>diff(d)===0?"Σήμερα":diff(d)===1?"Αύριο":`${DAYS[D(d).getDay()]} ${fmt(d)}`;
+  const cd=document.getElementById("cinDays");
+  cd.innerHTML=days.map(d=>`<button class="chip" aria-pressed="${d===cinDay}" data-d="${d}">${lab(d)}</button>`).join("");
+  cd.querySelectorAll(".chip").forEach(b=>b.onclick=()=>{cinDay=b.dataset.d;renderCinema(pick);});
+  const halls={};
+  films.forEach(f=>(f.showtimes[cinDay]||[]).forEach(s=>{const i=s.indexOf(" ");const time=s.slice(0,i), hall=s.slice(i+1);
+    ((halls[hall]??={})[f.title]??=[]).push(time);}));
+  const KIND={"Village":"Village Cinemas · χειμερινός","Εξωραϊστική (θερινός)":"Εξωραϊστική Λέσχη · θερινός"};
+  const hallCards = [...new Set(screenings.map(e=>e.hall))].map(h=>{
+    const rows = screenings.filter(e=>e.hall===h);
+    return `<div class="hall"><h3>${esc(h)}</h3><div class="kind">Κινηματοθέατρο · επόμενες προβολές</div>${
+      rows.map(e=>`<div class="film"><span><a href="${esc(e.sources[0].url)}" target="_blank" rel="noopener">${esc(e.title.replace(/\s\d{1,2}\/\d{1,2}$/,""))}</a></span><span class="t">${DAYS[D(e.start).getDay()].slice(0,3)} ${fmt(e.start)}${e.time?" · "+e.time:""}</span></div>`).join("")}</div>`;
+  }).join("");
+  document.getElementById("now").innerHTML = Object.entries(halls).sort((a,b)=>a[0].localeCompare(b[0])).map(([h,fs])=>`<div class="hall"><h3>${esc(h.replace(" (θερινός)",""))}</h3><div class="kind">${esc(KIND[h]||"")} · ${Object.keys(fs).length} ${Object.keys(fs).length===1?"ταινία":"ταινίες"}</div>${
+    Object.entries(fs).sort((a,b)=>a[1][0].localeCompare(b[1][0])).map(([title,ts])=>`<div class="film"><span>${esc(title.split(" - ")[0])}</span><span class="t">${ts.sort().join(" · ")}</span></div>`).join("")}</div>`).join("") + hallCards
+    + `<p class="srcs" style="grid-column:1/-1">Πηγές: <a href="https://cineportal.gr/bolos/" target="_blank" rel="noopener">CinePortal</a>, <a href="https://www.artandlife.gr/volos/cinema" target="_blank" rel="noopener">Art&amp;Life</a>, <a href="https://tickets.public.gr/gr-el/tickets/" target="_blank" rel="noopener">Public.gr</a></p>`;
+}
+function renderList(){
+  const pick = e=>e.area===area&&(active==="Όλες"||e.category===active);
+  const on = EVENTS.filter(e=>!e.running&&!e.hall&&pick(e)&&isOn(e));
+  document.getElementById("onWrap").hidden=!on.length;
+  document.getElementById("onList").innerHTML=on.map(evHTML).join("");
+  const dated = EVENTS.filter(e=>e.start&&!e.running&&!e.hall&&pick(e)&&!isOn(e)).sort((a,b)=>(a.start+(a.time||"")).localeCompare(b.start+(b.time||"")));
+  const byDay = {};
+  dated.forEach(e=>(byDay[e.start] ??= []).push(e));
+  document.getElementById("list").innerHTML = Object.entries(byDay).map(([d,items])=>{
+    const dt = D(d);
+    return `<div class="day"><div class="date"><span class="n">${dt.getDate()}</span><span class="m">${MONTHS[dt.getMonth()]}, ${DAYS[dt.getDay()]}</span></div><div>${items.map(evHTML).join("")}</div></div>`;
+  }).join("") || `<p class="empty">${area==="pelion"?"Λίγες εκδηλώσεις για το Πήλιο αυτή την εποχή. Οι δομημένες πηγές έχουν τις περισσότερες το καλοκαίρι.":"Δεν υπάρχουν εκδηλώσεις σε αυτή την κατηγορία."}</p>`;
+  renderCinema(pick);
+  const tba = EVENTS.filter(e=>!e.start&&pick(e));
+  document.getElementById("tbaWrap").hidden = !tba.length;
+  document.getElementById("tba").innerHTML = tba.map(evHTML).join("");
+}
+
+
+
+document.querySelectorAll(".gen").forEach(s=>{const d=new Date(DATA.generated+"T12:00");s.textContent=`${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;});
+renderStats(); renderTabs(); renderFilters(); renderList();
+
+/* ================= Υποβολές & διαχείριση (db + user) ================= */
+let DB=null, USER=null, UID=null, IS_ADMIN=false, KIND="event";
+let MY={items:{}}, ALLSUBS=[], SUBST={}, PUB_EVENTS=[], PUB_FEEDS=[], ADM_TAB="pending";
+const CATS=["Θέατρο","Μουσική","Σινεμά","Εκθέσεις","Χορός","Παιδικά","Συνέδρια","Πανεπιστημιακά","Πολιτική","Αθλητισμός","Γαστρονομία","Φεστιβάλ","Άλλο"];
+const KINDNAME={event:"Εκδήλωση",ical:"Ημερολόγιο iCal",rss:"RSS feed",site:"Ιστοσελίδα"};
+const STNAME={pending:"Σε αναμονή",approved:"Εγκρίθηκε",rejected:"Απορρίφθηκε"};
+const $=id=>document.getElementById(id);
+const todayIso=()=>{const n=new Date();return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}-${String(n.getDate()).padStart(2,"0")}`;};
+const isUrl=s=>{try{const u=new URL(s);return u.protocol==="https:"||u.protocol==="http:";}catch(e){return false;}};
+
+function fld(id,label,input,hint,wide){return `<div class="fld${wide?" wide":""}"><label for="${id}">${label}</label>${input}${hint?`<div class="hint">${hint}</div>`:""}</div>`;}
+function areaRadio(){return `<div class="fld"><label>Περιοχή *</label><div class="row"><label><input type="radio" name="f_area" value="volos" checked> Βόλος</label><label><input type="radio" name="f_area" value="pelion"> Πήλιο</label></div></div>`;}
+function catSelect(){return `<select id="f_cat">${CATS.map(c=>`<option>${c}</option>`).join("")}</select>`;}
+
+function renderForm(){
+  document.querySelectorAll("#kinds button").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.k===KIND)));
+  const hp=`<div class="hp" aria-hidden="true"><label for="f_web">Μην το συμπληρώσετε</label><input id="f_web" tabindex="-1" autocomplete="off"></div>`;
+  let h="";
+  if(KIND==="event"){
+    const venues=[...new Set(VENUES.map(v=>v.name))];
+    h=`<div class="fgrid">
+      ${fld("f_title","Τίτλος *",`<input id="f_title" maxlength="160" required>`,"",true)}
+      ${fld("f_cat","Κατηγορία",catSelect())}
+      ${areaRadio()}
+      ${fld("f_start","Ημερομηνία *",`<input id="f_start" type="date" min="${todayIso()}" required>`)}
+      ${fld("f_end","Έως (για πολυήμερες)",`<input id="f_end" type="date" min="${todayIso()}">`)}
+      ${fld("f_time","Ώρα",`<input id="f_time" type="time">`)}
+      ${fld("f_venue","Χώρος *",`<input id="f_venue" list="venueList" maxlength="120" required><datalist id="venueList">${venues.map(v=>`<option value="${esc(v)}">`).join("")}</datalist>`,"Διάλεξε γνωστό χώρο ή γράψε νέο.")}
+      ${fld("f_addr","Διεύθυνση (για νέο χώρο)",`<input id="f_addr" maxlength="160">`)}
+      ${fld("f_price","Τιμή",`<input id="f_price" maxlength="40" placeholder="π.χ. 10€">`,`<label style="font-weight:400"><input type="checkbox" id="f_free"> Ελεύθερη είσοδος</label>`)}
+      ${fld("f_link","Σύνδεσμος για περισσότερα",`<input id="f_link" type="url" placeholder="https://">`)}
+      ${fld("f_org","Διοργανωτής *",`<input id="f_org" maxlength="120" required>`)}
+      ${fld("f_note","Σημείωση προς τον διαχειριστή",`<textarea id="f_note" rows="2" maxlength="500"></textarea>`,"",true)}
+    </div><div id="dupe"></div>`;
+  } else {
+    const help={
+      ical:"Από Google Calendar: Ρυθμίσεις ημερολογίου → «Δημόσια διεύθυνση σε μορφή iCal». Από Outlook: Δημοσίευση ημερολογίου → σύνδεσμος ICS. Κάθε εκδήλωση που προσθέτεις εκεί θα εμφανίζεται εδώ αυτόματα.",
+      rss:"Το RSS διαβάζεται αυτόματα όταν κάθε άρθρο γράφει ρητά ημερομηνία εκδήλωσης (π.χ. «Παρασκευή 16 Οκτωβρίου, 21:30» ή «24/10») ή χρησιμοποιεί το πρότυπο RSS Event (ev:startdate). Άρθρα χωρίς ημερομηνία δεν δημοσιεύονται.",
+      site:"Για σελίδες χωρίς feed ο διαχειριστής θα ελέγξει αν μπορεί να διαβαστεί αυτόματα. Αν η σελίδα έχει ημερολόγιο iCal ή RSS, προτίμησε εκείνη την επιλογή."}[KIND];
+    h=`<p class="sub">${help}</p><div class="fgrid">
+      ${fld("f_url",KIND==="site"?"Διεύθυνση σελίδας εκδηλώσεων *":"Διεύθυνση feed *",`<input id="f_url" type="url" placeholder="https://" required>`,"",true)}
+      ${fld("f_org","Φορέας ή χώρος *",`<input id="f_org" maxlength="120" required>`)}
+      ${areaRadio()}
+      ${fld("f_cat","Κύρια κατηγορία",catSelect())}
+      ${KIND==="rss"?fld("f_date","Πώς γράφεται η ημερομηνία;",`<select id="f_date"><option value="text">Μέσα στον τίτλο ή στο κείμενο</option><option value="ev">Πρότυπο RSS Event (ev:startdate)</option><option value="unknown">Δεν ξέρω</option></select>`)
+        +fld("f_only","Περιεχόμενο",`<label style="font-weight:400"><input type="checkbox" id="f_only"> Το feed έχει μόνο εκδηλώσεις (όχι ειδήσεις)</label>`):""}
+      ${fld("f_note","Σημείωση προς τον διαχειριστή",`<textarea id="f_note" rows="2" maxlength="500"></textarea>`,"",true)}
+    </div>`;
+  }
+  $("formBody").innerHTML = h + hp + `<button type="button" class="cta fbtn" id="sendBtn">Υποβολή για έγκριση</button>`;
+  $("formMsg").textContent=""; $("formMsg").className="formmsg";
+  $("sendBtn").onclick=submitForm;
+  if(KIND==="event"){ ["f_title","f_start"].forEach(id=>$(id).addEventListener("input",checkDupe)); }
+}
+function checkDupe(){
+  const title=$("f_title").value, d=$("f_start").value, box=$("dupe");
+  if(!title||!d){box.innerHTML="";return;}
+  const words=new Set((title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").match(/[\p{L}\d]{4,}/gu)||[]));
+  const hits=EVENTS.filter(e=>e.start===d&&[...(e.title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").match(/[\p{L}\d]{4,}/gu)||[])].filter(w=>words.has(w)).length>=2);
+  box.innerHTML = hits.length?`<div class="dupe"><b>Μήπως υπάρχει ήδη;</b> ${hits.map(e=>`${esc(e.title)} (${esc(e.venue||"")})`).join("; ")}. Αν είναι η ίδια εκδήλωση, δεν χρειάζεται υποβολή.</div>`:"";
+}
+function formErr(msg){$("formMsg").textContent=msg;$("formMsg").className="formmsg err";}
+async function submitForm(){
+  if($("f_web").value) return;                      // honeypot: silently drop bots
+  const v=id=>($(id)?.value||"").trim();
+  const area=document.querySelector('input[name="f_area"]:checked')?.value||"volos";
+  let item={kind:KIND, area, category:v("f_cat")||"Άλλο", organizer:v("f_org"), note:v("f_note"), submittedAt:new Date().toISOString()};
+  if(!item.organizer) return formErr(KIND==="event"?"Συμπλήρωσε τον διοργανωτή.":"Συμπλήρωσε τον φορέα ή χώρο.");
+  if(KIND==="event"){
+    Object.assign(item,{title:v("f_title"),start:v("f_start"),end:v("f_end"),time:v("f_time"),venue:v("f_venue"),address:v("f_addr"),price:v("f_price"),free:$("f_free").checked,link:v("f_link")});
+    if(!item.title||!item.start||!item.venue) return formErr("Συμπλήρωσε τίτλο, ημερομηνία και χώρο.");
+    if(item.start<todayIso()) return formErr("Η ημερομηνία έχει περάσει.");
+    if(item.end&&item.end<item.start) return formErr("Η ημερομηνία λήξης είναι πριν από την έναρξη.");
+    if(item.link&&!isUrl(item.link)) return formErr("Ο σύνδεσμος πρέπει να ξεκινά με https://");
+  } else {
+    item.url=v("f_url");
+    if(!isUrl(item.url)) return formErr("Δώσε έγκυρη διεύθυνση που ξεκινά με https://");
+    if(KIND==="rss"){item.dateHint=v("f_date"); item.eventsOnly=$("f_only").checked;}
+  }
+  const recent=Object.values(MY.items||{}).filter(x=>Date.now()-Date.parse(x.submittedAt)<3600e3).length;
+  if(recent>=10) return formErr("Πολλές υποβολές την τελευταία ώρα. Δοκίμασε ξανά αργότερα.");
+  const id=`${Date.now().toString(36)}${Math.random().toString(36).slice(2,6)}`;
+  item.id=id;
+  $("sendBtn").disabled=true;
+  try{
+    const ref=DB.doc(`data/users/${UID}`);
+    const snap=await ref.get();
+    const cur=snap.exists?snap.data():{items:{}};
+    const items={...(cur.items||{}), [id]:item};
+    await ref.set({items});
+    $("formMsg").textContent="Η υποβολή στάλθηκε. Θα εμφανιστεί μόλις εγκριθεί."; $("formMsg").className="formmsg";
+    renderForm(); $("formMsg").textContent="Η υποβολή στάλθηκε. Θα εμφανιστεί μόλις εγκριθεί.";
+  }catch(e){ formErr("Η υποβολή δεν αποθηκεύτηκε. Ίσως δεν έχεις δικαίωμα υποβολής σε αυτή τη σελίδα."); $("sendBtn").disabled=false; }
+}
+
+function subLine(s){
+  return s.kind==="event"
+    ? `${fmt(s.start)}${s.end?" – "+fmt(s.end):""}${s.time?" · "+s.time:""} · ${esc(s.venue)} · ${esc(s.organizer)}`
+    : `${esc(s.url)} · ${esc(s.organizer)}`;
+}
+function renderMine(){
+  const items=Object.values(MY.items||{}).sort((a,b)=>b.submittedAt.localeCompare(a.submittedAt));
+  $("mine").hidden=!items.length;
+  $("mineList").innerHTML=items.map(s=>{const st=SUBST[s.id]?.status||"pending";
+    return `<div class="sitem"><div><div class="k">${KINDNAME[s.kind]}</div><b>${esc(s.title||s.organizer)}</b><div class="m">${subLine(s)}${st==="rejected"&&SUBST[s.id]?.reason?`<br>Αιτία: ${esc(SUBST[s.id].reason)}`:""}</div></div><span class="st2 ${st}">${STNAME[st]}</span></div>`;}).join("");
+}
+
+function renderAdmin(){
+  if(!IS_ADMIN) return;
+  const withSt=ALLSUBS.map(s=>({...s,_st:SUBST[s.id]?.status||"pending"}));
+  const counts={pending:0,approved:0,rejected:0}; withSt.forEach(s=>counts[s._st]++);
+  $("adminLink").hidden=false; $("adminLink").textContent=`Διαχείριση · ${counts.pending} σε αναμονή`;
+  $("admin").hidden=false;
+  $("admTabs").innerHTML=Object.keys(counts).map(k=>`<button type="button" data-t="${k}" aria-selected="${k===ADM_TAB}">${STNAME[k]} (${counts[k]})</button>`).join("");
+  $("admTabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{ADM_TAB=b.dataset.t;renderAdmin();});
+  const rows=withSt.filter(s=>s._st===ADM_TAB).sort((a,b)=>a.submittedAt.localeCompare(b.submittedAt));
+  $("admList").innerHTML = rows.length ? rows.map(s=>{
+    const edit = s.kind==="event" && ADM_TAB==="pending" ? `<div class="ed">
+        <div><label>Τίτλος</label><input data-f="title" value="${esc(s.title)}"></div>
+        <div><label>Ημερομηνία</label><input data-f="start" type="date" value="${esc(s.start)}"></div>
+        <div><label>Έως</label><input data-f="end" type="date" value="${esc(s.end||"")}"></div>
+        <div><label>Ώρα</label><input data-f="time" type="time" value="${esc(s.time||"")}"></div>
+        <div><label>Χώρος</label><input data-f="venue" value="${esc(s.venue)}"></div>
+        <div><label>Κατηγορία</label><select data-f="category">${CATS.map(c=>`<option ${c===s.category?"selected":""}>${c}</option>`).join("")}</select></div>
+        <div><label>Περιοχή</label><select data-f="area"><option value="volos" ${s.area==="volos"?"selected":""}>Βόλος</option><option value="pelion" ${s.area==="pelion"?"selected":""}>Πήλιο</option></select></div>
+      </div>` : "";
+    const extra = s.kind==="rss" ? `<div class="m">Ημερομηνία: ${esc({text:"στο κείμενο",ev:"ev:startdate",unknown:"άγνωστο"}[s.dateHint]||"-")} · ${s.eventsOnly?"μόνο εκδηλώσεις":"αναμεικτό περιεχόμενο"}</div>`:"";
+    const btns = ADM_TAB==="pending"
+      ? `<button type="button" class="cta" data-a="approve">Έγκριση</button><input data-f="reason" placeholder="Αιτία απόρριψης (προαιρετικά)"><button type="button" class="cta ghost" data-a="reject">Απόρριψη</button>`
+      : `<button type="button" class="cta ghost" data-a="undo">Επαναφορά σε αναμονή</button>${SUBST[s.id]?.reason?`<span class="m">Αιτία: ${esc(SUBST[s.id].reason)}</span>`:""}`;
+    return `<div class="adm" data-id="${s.id}" data-uid="${s._uid}"><div class="k" style="font-size:12px;text-transform:uppercase;color:var(--muted);font-weight:600">${KINDNAME[s.kind]} · ${s.area==="pelion"?"Πήλιο":"Βόλος"} · ${new Date(s.submittedAt).toLocaleString("el-GR")}</div>
+      <b>${esc(s.title||s.organizer)}</b><div class="m">${subLine(s)}${s.link?` · <a href="${esc(s.link)}" target="_blank" rel="noopener">σύνδεσμος</a>`:""}${s.note?`<br>Σημείωση: ${esc(s.note)}`:""}</div>${extra}${edit}<div class="btns">${btns}</div></div>`;
+  }).join("") : `<p class="sub">Τίποτα εδώ.</p>`;
+  $("admList").querySelectorAll(".adm").forEach(card=>card.querySelectorAll("button[data-a]").forEach(b=>b.onclick=()=>adminAct(card,b.dataset.a)));
+}
+async function adminAct(card,action){
+  const id=card.dataset.id, s=ALLSUBS.find(x=>x.id===id); if(!s) return;
+  card.querySelectorAll("button").forEach(b=>b.disabled=true);
+  try{
+    if(action==="approve"){
+      const ed={}; card.querySelectorAll(".ed [data-f]").forEach(i=>ed[i.dataset.f]=i.value.trim());
+      if(s.kind==="event"){
+        const e={...s,...ed}; delete e._uid; delete e._st;
+        await DB.doc(`pub/v1/events/${id}`).set({title:e.title,start:e.start,end:e.end||"",time:e.time||"",venue:e.venue,address:e.address||"",
+          category:e.category,area:e.area,price:e.price||"",free:!!e.free,link:e.link||"",organizer:e.organizer,approvedAt:new Date().toISOString()});
+      } else {
+        await DB.doc(`pub/v1/feeds/${id}`).set({kind:s.kind,url:s.url,organizer:s.organizer,area:s.area,category:s.category,dateHint:s.dateHint||"",eventsOnly:!!s.eventsOnly,approvedAt:new Date().toISOString()});
+      }
+      await DB.doc(`pub/v1/status/${id}`).set({status:"approved",at:new Date().toISOString()});
+    } else if(action==="reject"){
+      const reason=card.querySelector('[data-f="reason"]')?.value.trim()||"";
+      await DB.doc(`pub/v1/status/${id}`).set({status:"rejected",reason,at:new Date().toISOString()});
+    } else if(action==="undo"){
+      await DB.doc(`pub/v1/events/${id}`).delete(); await DB.doc(`pub/v1/feeds/${id}`).delete();
+      await DB.doc(`pub/v1/status/${id}`).delete();
+    }
+  }catch(e){ card.querySelectorAll("button").forEach(b=>b.disabled=false); alert("Η ενέργεια δεν ολοκληρώθηκε."); }
+}
+function pubToEvent(id,e){
+  return {id:"s"+id,title:e.title,start:e.start,end:e.end||null,time:e.time||null,venue:e.venue,category:e.category||"Άλλο",
+    area:e.area||"volos",price:e.free?"0":(e.price||"").replace("€","")||null,running:false,submitted:true,
+    sources:[{source:`Υποβολή: ${e.organizer}`,url:e.link||"#"}],method:"υποβολή"};
+}
+function refreshEvents(){
+  const today=todayIso();
+  EVENTS = DATA.events.concat(PUB_EVENTS.filter(e=>(e.end||e.start)>=today));
+  renderStats(); renderTabs(); renderFilters(); renderList();
+}
+async function exportApproved(){
+  const dl=await claude.use("downloads");
+  const events=PUB_EVENTS.map(e=>({title:e.title,start:e.start,end:e.end,time:e.time,venue:e.venue,area:e.area,category:e.category,
+    price:e.price==="0"?"":e.price,free:e.price==="0",link:e.sources[0].url==="#"?"":e.sources[0].url,organizer:e.sources[0].source.replace("Υποβολή: ","")}));
+  const data=JSON.stringify({exported:new Date().toISOString(),events,feeds:PUB_FEEDS},null,2);
+  if(!dl){ $("exportMsg").textContent="Η λήψη αρχείων δεν είναι διαθέσιμη εδώ."; return; }
+  try{ await dl.save({filename:"submissions.json",data}); $("exportMsg").textContent="Αποθηκεύτηκε. Βάλε το αρχείο δίπλα στο aggregator.py."; }
+  catch(e){ $("exportMsg").textContent="Η αποθήκευση ακυρώθηκε."; }
+}
+
+(async()=>{
+  if(typeof claude==="undefined"||!claude.use) return;
+  DB=await claude.use("db"); USER=await claude.use("user");
+  if(!DB) return;
+  // public: approved events and statuses
+  DB.collection("pub/v1/events").onSnapshot(q=>{PUB_EVENTS=q.docs.map(d=>pubToEvent(d.id,d.data()));refreshEvents();},()=>{});
+  DB.collection("pub/v1/status").onSnapshot(q=>{SUBST={};q.docs.forEach(d=>SUBST[d.id]=d.data());renderMine();renderAdmin();},()=>{});
+  if(!USER) return;
+  UID=await USER.id(); IS_ADMIN=await USER.canEdit();
+  const canWrite=await USER.can("data.write");
+  if(UID && canWrite!==false){
+    $("openSubmit").hidden=false;
+    $("openSubmit").onclick=()=>{$("submit").hidden=false; renderForm(); $("submit").scrollIntoView({behavior:"smooth"});};
+    document.querySelectorAll("#kinds button").forEach(b=>b.onclick=()=>{KIND=b.dataset.k;renderForm();});
+    DB.doc(`data/users/${UID}`).onSnapshot(s=>{MY=s.exists?s.data():{items:{}};renderMine();},()=>{});
+  }
+  if(IS_ADMIN){
+    DB.collection("data/users").onSnapshot(q=>{
+      ALLSUBS=[]; q.docs.forEach(d=>Object.values(d.data().items||{}).forEach(it=>ALLSUBS.push({...it,_uid:d.id})));
+      renderAdmin();},()=>{});
+    DB.collection("pub/v1/feeds").onSnapshot(q=>{PUB_FEEDS=q.docs.map(d=>({id:d.id,...d.data()}));},()=>{});
+    $("exportBtn").onclick=exportApproved;
+    renderAdmin();
+  }
+})();
+</script>
+</body>
+</html>

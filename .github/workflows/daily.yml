@@ -1,0 +1,52 @@
+name: Καθημερινή ενημέρωση
+
+on:
+  schedule:
+    - cron: "0 4 * * *"      # 04:00 UTC = 07:00 ώρα Ελλάδας (καλοκαίρι), 06:00 (χειμώνα)
+  workflow_dispatch:          # κουμπί «Run workflow» για χειροκίνητη εκτέλεση
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+
+      - name: Λήψη σελίδων
+        run: python fetch.py
+
+      - name: Συλλογή και δημιουργία σελίδας
+        env:
+          LIVE: "1"
+          TZ: Europe/Athens
+        run: python build_site.py
+
+      - name: Log στη σύνοψη της εκτέλεσης
+        if: always()
+        run: cat log.md >> "$GITHUB_STEP_SUMMARY" || true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,20 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Test//EL
+BEGIN:VEVENT
+UID:t1@test
+DTSTART;TZID=Europe/Athens:20261015T203000
+DTEND;TZID=Europe/Athens:20261015T223000
+SUMMARY:Δοκιμαστική συναυλία\, με κόμμα
+LOCATION:Cafe Santan\, Βόλος
+URL:https://example.org/e1
+END:VEVENT
+BEGIN:VEVENT
+UID:t2@test
+DTSTART;VALUE=DATE:20261102
+DTEND;VALUE=DATE:20261105
+SUMMARY:Δοκιμαστική έκθεση που 
+ συνεχίζεται σε δεύτερη γραμμή
+LOCATION:Ζαγορά Πηλίου
+END:VEVENT
+END:VCALENDAR
