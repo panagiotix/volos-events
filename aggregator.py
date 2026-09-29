@@ -8,19 +8,21 @@ Snapshots are the pages as fetched on 29 Sept 2026; in production fetch() downlo
 """
 import json, re, os, hashlib, unicodedata, urllib.request
 from feeds import parse_ics, parse_rss
+import casing
 from datetime import date
 from difflib import SequenceMatcher
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 # LIVE=1 → read pages downloaded today by fetch.py (folder live/); otherwise the saved snapshots
 SNAP = f"{HERE}/live" if os.environ.get("LIVE") == "1" else f"{HERE}/snapshots"
+LIVE = os.environ.get("LIVE") == "1"
 TODAY = date.fromisoformat(os.environ["SNAPSHOT_DATE"]) if os.environ.get("SNAPSHOT_DATE") else date.today()
 
 # ------------------------------------------------------------------ sources report
 SOURCES = [
     # tier: Κορμός
-    {"tier": "Κορμός", "name": "Art&Life, Βόλος", "url": "https://www.artandlife.gr/volos/events", "status": "ok",
-     "note": "Θέατρο, live, συναυλίες, σινεμά. Δομημένη λίστα."},
+    {"tier": "Κορμός", "name": "Art&Life, Βόλος", "url": "https://www.artandlife.gr/volos/events", "status": "blocked",
+     "note": "Απαντά 403 στα bots: δεν διαβάζεται αυτόματα. Χρειάζεται άδεια ή feed."},
     {"tier": "Κορμός", "name": "CinePortal, Βόλος", "url": "https://cineportal.gr/bolos/", "status": "ok",
      "note": "Ώρες προβολής ανά ημέρα και αίθουσα (Village, Εξωραϊστική)."},
     {"tier": "Κορμός", "name": "Περιφέρεια Θεσσαλίας, εφαρμογή εκδηλώσεων", "url": "https://app.thessaly.gov.gr/TourismEventsApp", "status": "ok",
@@ -30,14 +32,14 @@ SOURCES = [
     # tier: Εισιτήρια
     {"tier": "Εισιτήρια", "name": "TicketServices", "url": "https://www.ticketservices.gr/", "status": "ok",
      "note": "Ενιαία λίστα όλης της Ελλάδας με χώρο δίπλα σε κάθε εκδήλωση. Φίλτρο «ΒΟΛΟΣ/ΒΟΛΟΥ» στον χώρο."},
-    {"tier": "Εισιτήρια", "name": "More.com (και Ticket365)", "url": "https://www.more.com/gr-el/tickets/", "status": "ok",
-     "note": "Η σελίδα /gr-el/tickets φέρνει όλη τη λίστα σε στατική μορφή, με φίλτρο «Μαγνησία: Βόλος, Πήλιο, Σκιάθος». Το ticket365.gr ανακατευθύνει εδώ."},
+    {"tier": "Εισιτήρια", "name": "More.com (και Ticket365)", "url": "https://www.more.com/gr-el/tickets/", "status": "sparse",
+     "note": "Το robots.txt δεν απαντά. Ο ίδιος κατάλογος διαβάζεται από το tickets.public.gr."},
     {"tier": "Εισιτήρια", "name": "Public.gr Tickets (κατάλογος More.com)", "url": "https://tickets.public.gr/gr-el/tickets/", "status": "ok",
      "note": "Ίδιος κατάλογος με το More.com. Εδώ βρέθηκαν οι προβολές στο Αχίλλειον (CineDoc Caravan)."},
     {"tier": "Εισιτήρια", "name": "Public.gr, σελίδες περιοδειών", "url": "https://tickets.public.gr/gr-el/tickets/standupcomedy/lampros-fisfis-poly-kalytera-tora-on-tour/", "status": "ok",
      "note": "Για κάθε «Πολλαπλοί χώροι» της λίστας ο crawler ανοίγει τη σελίδα της περιοδείας, όπου κάθε σταθμός έχει πόλη, χώρο, ώρα και τιμή. Στο More.com οι ίδιες σελίδες απαγορεύουν τα bots, στο public.gr επιτρέπονται."},
-    {"tier": "Εισιτήρια", "name": "Mood (musicofourdesire)", "url": "https://events.musicofourdesire.com/events/Volos", "status": "ok",
-     "note": "Δομημένη λίστα συναυλιών για τον Βόλο, με ώρα και χώρο. Έφερε Ex Silentio, VHS Live, Fann, Buzz Capitano και ώρες που έλειπαν."},
+    {"tier": "Εισιτήρια", "name": "Mood (musicofourdesire)", "url": "https://events.musicofourdesire.com/events/Volos", "status": "blocked",
+     "note": "Η σελίδα απαντά 403 στα bots. Δεν διαβάζεται αυτόματα."},
     {"tier": "Εισιτήρια", "name": "TicketServices, μεμονωμένες σελίδες", "url": "https://www.ticketservices.gr/event/dimotiko-theatro-volou-vira-tis-agkires/?lang=el", "status": "ok",
      "note": "Περασμένες εκδηλώσεις φεύγουν από την κεντρική λίστα αλλά η σελίδα τους μένει: εδώ κρατιούνται στο αρχείο. Η «Βίρα τις... άγκυρες!» ήταν στις 3/10/2025."},
     {"tier": "Εισιτήρια", "name": "Fever", "url": "https://feverup.com/el/volos-ellada", "status": "ok",
@@ -171,7 +173,8 @@ def collect_region():
     rows = []
     live = re.compile(r"(\d{2})/(\d{2})/(\d{4}) - (\d{2})/(\d{2})/(\d{4})\s*\n(ΠΕ [^\n]+?)\s*\n([^\n]*)\n\s*\n([^\n]+)\n(.*?)Προβολή Εκδήλωσης\]\((\S+?)\)", re.S)
     for d1, m1, y1, d2, m2, y2, pe, cat, title, desc, url in live.findall(text):
-        rows.append((title.strip(), d1, m1, y1, d2, m2, y2, pe.strip(), f"{cat} {re.sub(r'\s+', ' ', desc)}", url))
+        desc = re.sub(r"\s+", " ", desc)
+        rows.append((title.strip(), d1, m1, y1, d2, m2, y2, pe.strip(), cat + " " + desc, url))
     old = re.compile(r"\[(.+?) (\d{2})/(\d{2})/(\d{4}) - (\d{2})/(\d{2})/(\d{4}) (ΠΕ \S+) (.+?) Προβολή Εκδήλωσης\]\((\S+)\)")
     if not rows:
         rows = [m.groups() for m in old.finditer(text)]
@@ -328,6 +331,105 @@ def collect_zagora():
                        None if t == "00:00" else t, "Ζαγορά-Μούρεσι, Πήλιο", category=cat, context=f"{title} Πήλιο"))
     return out
 
+# ================================================================ live-format parsers
+PUBLIC_BASE = "https://tickets.public.gr"
+SHORT_M = {"ιαν":1,"φεβ":2,"μαρ":3,"απρ":4,"μαι":5,"ιουν":6,"ιουλ":7,"αυγ":8,"σεπ":9,"οκτ":10,"νοε":11,"δεκ":12}
+
+def month_num(word):
+    w = fold(word).strip(".,")
+    if w in MONTHS: return MONTHS[w]
+    for k, v in SHORT_M.items():
+        if w.startswith(k): return v
+    return None
+
+def dm_to_iso(d, m_word):
+    m = month_num(m_word)
+    if not m: return None
+    d = int(d)
+    y = TODAY.year if (date(TODAY.year, m, d) - TODAY).days > -60 else TODAY.year + 1
+    return date(y, m, d).isoformat()
+
+def parse_public_when(when):
+    """'31 Οκτωβριου' | '1 - 11 Οκτωβριου' | '14 Νοε - 2 Ιαν' → (start, end)"""
+    w = when.strip()
+    m = re.match(r"(\d{1,2}) (\S+) - (\d{1,2}) (\S+)$", w)
+    if m: return dm_to_iso(m.group(1), m.group(2)), dm_to_iso(m.group(3), m.group(4))
+    m = re.match(r"(\d{1,2}) - (\d{1,2}) (\S+)$", w)
+    if m: return dm_to_iso(m.group(1), m.group(3)), dm_to_iso(m.group(2), m.group(3))
+    m = re.match(r"(\d{1,2}) (\S+)$", w)
+    if m: return dm_to_iso(m.group(1), m.group(2)), None
+    return None, None
+
+PUBLIC_ITEM = re.compile(r"\n\n([^\n]+)\n\n### ([^\n]+)\n\n([^\n]+)\]\((/gr-el/tickets/[^)\s]+)\)")
+
+def collect_public_live():
+    text = open(f"{SNAP}/public_tickets.md", encoding="utf-8").read()
+    out, seen = [], set()
+    for when, title, venue, path in PUBLIC_ITEM.findall(text):
+        if path in seen: continue
+        seen.add(path)
+        if "πολλαπλοι χωροι" in fold(venue): continue        # tours: read from their own pages
+        if not (match_venue(venue) or classify(venue) in ("volos", "pelion")): continue
+        start, end = parse_public_when(when)
+        if not start: continue
+        cat = "Σινεμά" if "/cinema/" in path else "Θέατρο" if "/theater/" in path else "Μουσική" if "/music/" in path else "Άλλο"
+        title = re.sub(r"\s+\d{1,2}/\d{1,2}$", "", title.strip())
+        parts = [p.strip() for p in title.split("|")]
+        title = " | ".join(p for p in parts if fold(p) not in ("volos", "βολος") and fold(p) != fold(venue)) or parts[0]
+        out.append(rec("Public.gr", PUBLIC_BASE + path, title, start, end if end != start else None, None, venue,
+                       category=cat, context=f"{title} {venue}"))
+    return out
+
+TOUR_ROW = re.compile(r"\n\S+, (\d{1,2})/(\d{1,2})\n\n(\d{1,2}:\d{2})\n\n([^\n]+)\n\n(?:\[[^\n]*\)\n\n)?([^\n]+)\n\n([\d.,]+)\s*€")
+
+def collect_tours_live():
+    out = []
+    tdir = f"{SNAP}/tours"
+    if not os.path.isdir(tdir): raise FileNotFoundError(tdir)
+    for fn in sorted(os.listdir(tdir)):
+        text = open(f"{tdir}/{fn}", encoding="utf-8").read()
+        m = re.search(r"^URL: (\S+)", text, re.M)
+        url = m.group(1) if m else PUBLIC_BASE
+        for d, mo, t, title, venue, price in TOUR_ROW.findall(text):
+            if not (match_venue(venue) or classify(venue) in ("volos", "pelion")): continue
+            mo, d = int(mo), int(d)
+            y = TODAY.year if (date(TODAY.year, mo, d) - TODAY).days > -60 else TODAY.year + 1
+            title = re.sub(r"\s*\|\s*[^|]*$", "", title).replace("|", "–").strip(" –")
+            venue_name = venue.split(" - ")[0].strip()
+            cat = "Stand-up" if "standup" in url else "Θέατρο" if "theat" in url else "Μουσική" if "music" in url else "Άλλο"
+            out.append(rec("Public.gr (περιοδεία)", url, title, date(y, mo, d).isoformat(), None, t, venue_name,
+                           price.replace(",", "."), cat, context=f"{title} {venue}"))
+    return out
+
+FEVER_ITEM = re.compile(r"\n\s*([^\n]+)\n\n\s*### ([^\n]+)\n\n\s*(\d{1,2}) (\S+)[^\n]*\n\n\s*Από ([\d,.]+)\s*€\]\((/m/\d+)")
+
+def collect_fever_live():
+    text = open(f"{SNAP}/fever_volos.md", encoding="utf-8").read()
+    out, seen = [], set()
+    for venue, title, d, mon, price, path in FEVER_ITEM.findall(text):
+        if path in seen or "volos" not in fold(venue) and not match_venue(venue): continue
+        seen.add(path)
+        start = dm_to_iso(d, mon)
+        if not start: continue
+        out.append(rec("Fever", "https://feverup.com" + path, title.strip(), start, None, None, venue.strip(),
+                       f"από {price}", "Μουσική", context=f"{title} {venue}"))
+    return out
+
+AOGOC_ITEM = re.compile(r"(?:(\d{2})\.(\d{2}) — )?(\d{2})\.(\d{2})\.(\d{4})\n\n([^\n]+)\n\n### ([^\n]+)\n\n(.*?)\]\((https://allofgreeceone\.culture\.gov\.gr/[^\s)]+)", re.S)
+
+def collect_aogoc_live():
+    text = open(f"{SNAP}/aogoc_volos.md", encoding="utf-8").read()
+    out, seen = [], set()
+    for d1, m1, d2, m2, y, cat, title, venue, url in AOGOC_ITEM.findall(text):
+        if url in seen: continue
+        seen.add(url)
+        venue = re.sub(r"\s+", " ", venue).strip()
+        end = f"{y}-{m2}-{d2}"
+        start = f"{y}-{m1}-{d1}" if d1 else end
+        out.append(rec("Όλη η Ελλάδα ένας Πολιτισμός", url, title.strip(), start, end if end != start else None,
+                       None, venue, None, "Μουσική" if "music" in fold(cat) else "Θέατρο", context=f"{title} {venue}"))
+    return out
+
 # ------------------------------------------------------------------ dedup
 def film_key(t): return norm(t.split(" - ")[0].replace("Encore", ""))
 
@@ -380,6 +482,11 @@ def write_log(raw, events, rejected):
     for src, n in per_src.most_common():
         L.append(f"| {src} | {n} | {kept_src.get(src, 0)} |")
     L += ["", "## Σφάλματα πηγών", ""] + (SOURCE_ERRORS or ["- Κανένα."])
+    L += ["", "## Τίτλοι με κεφαλαία που έμειναν ως έχουν", "",
+          "Πρόσθεσε τις λέξεις στο `accents.txt` με σωστό τονισμό (κεφαλαίο πρώτο γράμμα = κύριο όνομα).", ""]
+    missing = sorted({w for _, ws in CASING_LOG for w in ws})
+    L += [f"- {t} — λείπουν: {', '.join(ws)}" for t, ws in CASING_LOG] or ["- Κανένας."]
+    if missing: L += ["", "Όλες μαζί: " + " ".join(missing)]
     L += ["", "## Υποβολές και feeds διοργανωτών", ""] + (FEED_LOG or ["- Καμία εγκεκριμένη υποβολή feed σε αυτή την εκτέλεση."])
     L += ["", "## Κατάσταση πηγών", "", "| Κατάσταση | Πηγή | Σημείωση |", "|---|---|---|"]
     for x in SOURCES:
@@ -403,6 +510,7 @@ def write_log(raw, events, rejected):
     open(f"{HERE}/log.md", "w", encoding="utf-8").write("\n".join(L) + "\n")
 
 FEED_LOG = []
+CASING_LOG = []
 SOURCE_ERRORS = []
 
 def safe(fn, *a):
@@ -461,13 +569,18 @@ def load_overrides():
 
 def run():
     raw, rejected = [], []
-    raw += safe(collect_artandlife) + safe(collect_cineportal) + safe(collect_uth)
+    raw += safe(collect_cineportal) + safe(collect_uth) + safe(collect_ticketservices) + safe(collect_zagora)
     reg, rej = safe(collect_region); raw += reg
-    for x in rej:     # region rows outside Magnesia still go to review, with a full record
-        rejected.append({**x, "key": hashlib.md5(x["title"].encode()).hexdigest()[:10], "start": None, "url": "", "venue": ""})
-    raw += safe(collect_ticketservices) + safe(collect_more) + safe(collect_fever)
-    raw += safe(collect_public_listing) + safe(collect_public_tour, "public_tour_fisfis.txt") + safe(collect_mood)
-    raw += safe(collect_ts_pages) + safe(collect_aogoc) + safe(collect_zagora)
+    if LIVE:
+        raw += safe(collect_public_live) + safe(collect_tours_live) + safe(collect_fever_live) + safe(collect_aogoc_live)
+        for fn, f in ((collect_artandlife, "artandlife_volos.md"), (collect_mood, "mood_volos.md")):
+            if os.path.exists(f"{SNAP}/{f}"):
+                got = safe(fn); raw += got
+                if not got: SOURCE_ERRORS.append(f"- `{fn.__name__}`: η σελίδα κατέβηκε αλλά ο parser δεν βρήκε τίποτα — χρειάζεται προσαρμογή στη ζωντανή μορφή")
+    else:                                                 # saved snapshots (offline test)
+        raw += safe(collect_artandlife) + safe(collect_more) + safe(collect_fever) + safe(collect_public_listing)
+        raw += safe(collect_public_tour, "public_tour_fisfis.txt") + safe(collect_mood)
+        raw += safe(collect_ts_pages) + safe(collect_aogoc)
     raw += safe(collect_submissions)
     overrides = load_overrides()
 
@@ -494,6 +607,13 @@ def run():
         kept.append(r)
 
     events = dedupe(kept)
+    # ALL-CAPS titles → normal Greek, only where every word's accent is known
+    lex = casing.build_lexicon([SNAP, f"{HERE}/snapshots"], ["/usr/share/hunspell/el_GR.dic"], f"{HERE}/accents.txt")
+    for e in events:
+        new, unknown = casing.recase(e["title"], lex)
+        if unknown and not e["past"]:
+            CASING_LOG.append((e["title"], unknown))
+        e["title"] = new
     for e in events:
         vid = match_venue(e["venue_text"])
         if vid == "achilleion":
