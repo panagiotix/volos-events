@@ -6,8 +6,10 @@ import aggregator
 aggregator.run()
 from aggregator import VENUES
 data = json.load(open(f"{HERE}/output.json", encoding="utf-8"))
-if len(data["events"]) < 5:
-    print(f"Μόνο {len(data['events'])} εκδηλώσεις: πιθανή αποτυχία λήψεων. Δεν δημοσιεύεται, μένει η προηγούμενη σελίδα.")
+real = [e for e in data["events"] if not e.get("running")]          # films don't count
+if len(real) < 10:
+    print(f"Μόνο {len(real)} εκδηλώσεις (χωρίς τις ταινίες): πιθανή αποτυχία λήψεων. "
+          "Δεν δημοσιεύεται, μένει η προηγούμενη σελίδα.")
     sys.exit(1)
 venues = [{"name": n, "aliases": a} for n, a in VENUES.values()]
 html = open(f"{HERE}/page_template.html", encoding="utf-8").read()
