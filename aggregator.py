@@ -64,6 +64,12 @@ SOURCES = [
      "note": "Ό,τι εγκρίνει ο διαχειριστής εξάγεται ως submissions.json και διαβάζεται εδώ. Τα feeds iCal/RSS ανανεώνονται σε κάθε εκτέλεση."},
     {"tier": "Κορμός", "name": "Μουσείο της Πόλης του Βόλου, εκθέσεις", "url": "https://vmoc.gr/index.php/Site_Map", "status": "ok",
      "note": "Ο χάρτης του ιστότοπου δίνει τις εκθέσεις (νεότερη πρώτη)· κάθε σελίδα έχει «Διάρκεια» και «Πού». Νέες εκθέσεις μπαίνουν αυτόματα."},
+    {"tier": "Εισιτήρια", "name": "allevents.in, Βόλος", "url": "https://allevents.in/volos", "status": "ok",
+     "note": "Δίνει τη λίστα σε δομημένο Markdown (όνομα, ημερομηνία, χώρος, τιμή). Φέρνει και εκδηλώσεις συλλογικοτήτων."},
+    {"tier": "Κορμός", "name": "Δίκτυο Βιβλιοθηκών Δήμου Βόλου (diki.gr)", "url": "http://www.diki.gr/index.php/Site_Map", "status": "ok",
+     "note": "Μενού «Εκδηλώσεις» (νεότερη πρώτη)· κάθε σελίδα: είδος, τίτλος, «Πέμπτη 11 Ιουνίου 2026, 7:00 μμ», χώρος."},
+    {"tier": "Εκτός", "name": "Public Events (καταστήματα Public)", "url": "https://events.public.gr/events.php?region=%CE%92%CF%8C%CE%BB%CE%BF%CF%82", "status": "sparse",
+     "note": "Σήμερα 0 εκδηλώσεις για Βόλο· ο parser γράφεται όταν εμφανιστεί η πρώτη."},
     # tier: removed
     {"tier": "Εκτός", "name": "Ειδησεογραφικά, RSS Δήμου, ραδιόφωνα, τμήματα ΠΘ", "url": "", "status": "removed",
      "note": "Αφαιρέθηκαν: τα άρθρα θέλουν LLM για ημερομηνία και χώρο, τα τμήματα βγήκαν από το scope."},
@@ -94,10 +100,11 @@ def mk_date(day, month_word, year=None):
 # ------------------------------------------------------------------ venues & areas
 VENUES = {
     "theatro": ("Δημοτικό Θέατρο Βόλου «Βαγγέλης Παπαθανασίου»", ["βαγγελης παπαθανασιου", "δημοτικο θεατρο βολου", "vangelis papathanasiou"]),
+    "diki": ("Κεντρική Βιβλιοθήκη Βόλου", ["κεντρικη βιβλιοθηκη βολου"]),
     "vmoc": ("Μουσείο της Πόλης του Βόλου", ["μουσειο της πολης του βολου", "μουσειο πολης βολου"]),
     "achilleion": ("Κινηματοθέατρο Αχίλλειον", ["αχιλλειον", "achilleion"]),
     "ekthesiako": ("Εκθεσιακό Κέντρο Βόλου", ["εκθεσιακο κεντρο βολου"]),
-    "demetrias": ("Αρχαίο Θέατρο Δημητριάδας", ["demetrias", "δημητριαδ"]),
+    "demetrias": ("Αρχαίο Θέατρο Δημητριάδας", ["theatre of demetrias", "θεατρο δημητριαδ"]),
     "athanasakeio": ("Αθανασάκειο Αρχαιολογικό Μουσείο", ["athanasakio", "αθανασακει"]),
     "theatrini": ("Κέντρο Πολιτισμού και Τεχνών «Θεατρίνη»", ["θεατρινη"]),
     "santan": ("Cafe Santan", ["cafe santan"]),
@@ -465,6 +472,87 @@ def collect_vmoc():
         else: SOURCE_ERRORS.append(f"- Μουσείο Πόλης: η σελίδα {fn} δεν έχει καθαρή γραμμή «Διάρκεια» — παραλείφθηκε")
     return out
 
+
+EN_M = {"jan":1,"feb":2,"mar":3,"apr":4,"may":5,"jun":6,"jul":7,"aug":8,"sep":9,"oct":10,"nov":11,"dec":12}
+AE_DATE = re.compile(r"\w{3}, (\d{1,2}) (\w{3}) at (\d{1,2}):(\d{2}) ([ap]m)(?: – \w{3}, (\d{1,2}) (\w{3}) at)?")
+
+def _ae_iso(d, mon):
+    m = EN_M.get(mon.lower()[:3])
+    if not m: return None
+    d = int(d)
+    y = TODAY.year if (date(TODAY.year, m, d) - TODAY).days > -60 else TODAY.year + 1
+    return date(y, m, d).isoformat()
+
+def collect_allevents():
+    """allevents.in serves a structured Markdown listing (Event Name / Date / Event URL / Venue / Price)."""
+    text = open(f"{SNAP}/allevents_volos.md", encoding="utf-8").read()
+    out, seen = [], set()
+    for block in text.split("- **Event Name**: ")[1:]:
+        f = dict(re.findall(r"\*\*(Date|Event URL|Venue|Price)\*\*: ([^\n]+)", block))
+        title = block.split("\n", 1)[0].strip()
+        url = f.get("Event URL", "").strip()
+        if not url or url in seen: continue
+        seen.add(url)
+        m = AE_DATE.search(f.get("Date", ""))
+        if not m: continue
+        d, mon, hh, mm, ap, d2, mon2 = m.groups()
+        h = int(hh) % 12 + (12 if ap == "pm" else 0)
+        start = _ae_iso(d, mon); end = _ae_iso(d2, mon2) if d2 else None
+        if not start: continue
+        pr = re.findall(r"\d+(?:[.,]\d+)?", f.get("Price", ""))
+        price = (f"{pr[0]}–{pr[1]}" if len(pr) > 1 and pr[0] != pr[1] else pr[0]) if pr else None
+        venue = f.get("Venue", "").strip()
+        title = re.sub(r"\s*\|\s*(Volos|Βόλος)\s*\|\s*", " | ", title).strip(" |")
+        out.append(rec("allevents.in", url, title, start, end if end != start else None, f"{h:02d}:{mm}",
+                       venue, price, "Άλλο", context=f"{title} {venue}"))
+    return out
+
+
+DIKI_WHEN = re.compile(r"(?:Δευτέρα|Τρίτη|Τετάρτη|Πέμπτη|Παρασκευή|Σάββατο|Κυριακή)\s+(\d{1,2})\s+(\S+)\s+(\d{4})(?:\s*[-–]\s*(?:\S+\s+)?(\d{1,2})\s+(\S+)\s+(\d{4}))?(?:,?\s*(?:ώρα\s*)?(\d{1,2})[:.](\d{2})\s*(π\.?\s?μ|μ\.?\s?μ)?)?", re.I)
+
+def parse_diki(text):
+    """Library event page: [type] / **title** / 'Πέμπτη 11 Ιουνίου 2026, 7:00 μμ' / **venue**. No clear date → None."""
+    url = (re.search(r"^URL: (\S+)", text, re.M) or [None, ""])[1]
+    body = text.split("[Επικοινωνία](", 1)[-1]
+    body = body.split("προετοιμάστε την έρευνα", 1)[0]
+    m = DIKI_WHEN.search(body)
+    if not m: return None
+    d1, m1, y1, d2, m2, y2, hh, mm, ap = m.groups()
+    mo1 = month_num(m1)
+    if not mo1: return None
+    start = date(int(y1), mo1, int(d1)).isoformat()
+    end = date(int(y2), month_num(m2), int(d2)).isoformat() if d2 and month_num(m2) else None
+    time = None
+    if hh:
+        h = int(hh)
+        if ap and fold(ap).startswith("μ") and h < 12: h += 12
+        elif not ap and h < 9: h += 12                        # "7:00" at a library event = evening
+        time = f"{h:02d}:{mm}"
+    head = body[:m.start()]
+    bolds = re.findall(r"\*\*(.+?)\*\*", head)
+    title = re.sub(r"[*_]", "", bolds[-1]).strip() if bolds else ""
+    lines = [l.strip() for l in head.splitlines()
+             if l.strip() and not l.strip().startswith(("-", "*", "!", "[", "http")) and ")" not in l]
+    kind = lines[0] if lines and not lines[0].startswith("**") else ""
+    if not title: return None
+    after = body[m.end():m.end() + 200]
+    vb = re.search(r"\*\*(.+?)\*\*", after)
+    venue = re.sub(r"[*_]", "", vb.group(1)).strip() if vb else "Κεντρική Βιβλιοθήκη Βόλου"
+    full = f"{kind}: {title}" if kind and len(kind) < 40 else title
+    cat = "Βιβλίο" if "βιβλ" in fold(kind) else "Εκθέσεις" if "εκθεσ" in fold(kind) else "Ομιλίες" if re.search(r"ομιλ|διαλεξ|ημεριδ|συζητ", fold(kind)) else "Άλλο"
+    return rec("Βιβλιοθήκες Βόλου", url, full, start, end if end and end != start else None, time,
+               venue, None, cat, context=f"{title} {venue} Βόλος")
+
+def collect_diki():
+    d = f"{SNAP}/diki"
+    if not os.path.isdir(d): raise FileNotFoundError(d)
+    out = []
+    for fn in sorted(os.listdir(d)):
+        r = parse_diki(open(f"{d}/{fn}", encoding="utf-8").read())
+        if r: out.append(r)
+        else: SOURCE_ERRORS.append(f"- Βιβλιοθήκες: η σελίδα {fn} δεν έχει αναγνωρίσιμη ημερομηνία — παραλείφθηκε")
+    return out
+
 # ------------------------------------------------------------------ dedup
 def film_key(t): return norm(t.split(" - ")[0].replace("Encore", ""))
 
@@ -608,7 +696,7 @@ def run():
     reg, rej = safe(collect_region); raw += reg
     if LIVE:
         raw += safe(collect_public_live) + safe(collect_tours_live) + safe(collect_fever_live) + safe(collect_aogoc_live)
-        raw += safe(collect_vmoc)
+        raw += safe(collect_vmoc) + safe(collect_allevents) + safe(collect_diki)
         for fn, f in ((collect_artandlife, "artandlife_volos.md"), (collect_mood, "mood_volos.md")):
             if os.path.exists(f"{SNAP}/{f}"):
                 got = safe(fn); raw += got

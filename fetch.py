@@ -34,6 +34,7 @@ PAGES = {
     "zagora_calendar.md":  "https://www.dimos-zagoras-mouresiou.gr/fullcalendar",
     "public_tickets.md":   "https://tickets.public.gr/gr-el/tickets/",   # same catalogue as more.com
     "aogoc_volos.md":      "https://allofgreeceone.culture.gov.gr/en/?s=volos",
+    "allevents_volos.md":  "https://allevents.in/volos",           # served as Markdown (see MARKDOWN_OK)
     # answered 403 before; retried with complete headers — the log says who refused
     "artandlife_volos.md": "https://www.artandlife.gr/volos/events",
     "mood_volos.md":       "https://events.musicofourdesire.com/events/Volos",
@@ -46,6 +47,8 @@ PROBES = [
     "https://events.musicofourdesire.com/sitemap.xml",
 ]
 VMOC_SITEMAP = "https://vmoc.gr/index.php/Site_Map"
+DIKI_SITEMAP = "http://www.diki.gr/index.php/Site_Map"
+DIKI_MAX = 10
 VMOC_MAX = 8                  # newest exhibitions come first in the menu
 TOUR_SKIP = ("/cinema/", "/museums", "/streaming", "/subscriptions", "/voucher")
 MAX_TOURS = 120
@@ -78,8 +81,13 @@ def robots_for(url):
 # without a cookie jar that is an endless redirect, so we keep cookies for the run
 _OPENER = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
 
+MARKDOWN_OK = ("allevents.in",)   # sites that offer a Markdown version of the page: ask for it
+
 def get(url):
-    req = urllib.request.Request(url, headers=HEADERS)
+    h = dict(HEADERS)
+    if any(d in url for d in MARKDOWN_OK):
+        h["Accept"] = "text/markdown, text/html;q=0.8"
+    req = urllib.request.Request(url, headers=h)
     with _OPENER.open(req, timeout=30) as r:
         return r.read().decode(r.headers.get_content_charset() or "utf-8", "replace")
 
@@ -118,7 +126,8 @@ def main():
     for fname, url in PAGES.items():
         if not allowed(url, note, fname): continue
         try:
-            text = to_text(get(url))
+            raw = get(url)
+            text = raw if raw.lstrip().startswith("#") and "**Event Name**" in raw else to_text(raw)
             open(f"{OUT}/{fname}", "w", encoding="utf-8").write(text)
             note(f"OK     {fname:24} {len(text):>7} χαρακτήρες  ← {url}"); ok += 1
         except Exception as ex:
@@ -185,6 +194,30 @@ def main():
         except Exception as ex:
             note(f"ERR    vmoc sitemap: {why_blocked(ex)}")
     note(f"Μουσείο Πόλης: {vok} σελίδες εκθέσεων κατέβηκαν")
+
+    # Volos libraries (diki.gr): same CMS; the "Εκδηλώσεις" menu (Menu_News) lists events, newest first
+    os.makedirs(f"{OUT}/diki", exist_ok=True)
+    dok = 0
+    if allowed(DIKI_SITEMAP, note, "diki sitemap"):
+        try:
+            smap = to_text(get(DIKI_SITEMAP))
+            m = re.search(r"\[Εκδηλώσεις\]\([^)]*Menu_News[^)]*\)(.*?)(?:Αρχείο Εκδηλώσεων|\[Περισσότερα\])", smap, re.S)
+            if not m: raise ValueError("δεν βρέθηκε το μενού «Εκδηλώσεις» (Menu_News)")
+            pages = []
+            for u in re.findall(r"\]\(((?:https?://(?:www\.)?diki\.gr)?/?index\.php/[^\s)]+)", m.group(1)):
+                u = u if u.startswith("http") else "http://www.diki.gr/" + u.lstrip("/")
+                if u not in pages: pages.append(u)
+            if not pages: note("ERR    diki: μενού χωρίς συνδέσμους: " + repr(m.group(1)[:200]))
+            for n, url in enumerate(pages[:DIKI_MAX]):
+                if not allowed(url, note, "diki"): continue
+                try:
+                    open(f"{OUT}/diki/{n:02d}.md", "w", encoding="utf-8").write(f"URL: {url}\n\n" + to_text(get(url))); dok += 1
+                except Exception as ex:
+                    note(f"ERR    diki {url}: {why_blocked(ex)}")
+                time.sleep(1.5)
+        except Exception as ex:
+            note(f"ERR    diki sitemap: {why_blocked(ex)}")
+    note(f"Βιβλιοθήκες Βόλου: {dok} σελίδες εκδηλώσεων κατέβηκαν")
     note(f"Κύριες σελίδες: {ok}/{len(PAGES)} κατέβηκαν")
     log.close()
     if ok < len(PAGES) // 2:
