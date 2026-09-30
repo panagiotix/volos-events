@@ -163,8 +163,18 @@ def main():
     if allowed(VMOC_SITEMAP, note, "vmoc sitemap"):
         try:
             smap = to_text(get(VMOC_SITEMAP))
+            if "[Εκθέσεις](" not in smap:
+                raise ValueError("δεν βρέθηκε το μενού «Εκθέσεις» στον χάρτη")
             block = smap.split("[Εκθέσεις](", 1)[1].split("[Δίκτυο Μουσείων](", 1)[0]
-            pages = re.findall(r"\]\((https://vmoc\.gr/index\.php/[^\s)]+)", block)[:VMOC_MAX]
+            # links may be absolute (https://vmoc.gr/index.php/x) or relative (/index.php/x or index.php/x)
+            found = re.findall(r"\]\(((?:https?://(?:www\.)?vmoc\.gr)?/?index\.php/[^\s)]+)", block)
+            pages = []
+            for u in found:
+                u = u if u.startswith("http") else "https://vmoc.gr/" + u.lstrip("/")
+                if u not in pages: pages.append(u)
+            pages = pages[:VMOC_MAX]
+            if not pages:
+                note("ERR    vmoc: το μενού «Εκθέσεις» βρέθηκε αλλά χωρίς συνδέσμους. Αρχή του μπλοκ: " + repr(block[:200]))
             for n, url in enumerate(pages):
                 if not allowed(url, note, "vmoc"): continue
                 try:
