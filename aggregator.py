@@ -483,9 +483,50 @@ def _ae_iso(d, mon):
     y = TODAY.year if (date(TODAY.year, m, d) - TODAY).days > -60 else TODAY.year + 1
     return date(y, m, d).isoformat()
 
+def jsonld_events(html):
+    """schema.org Event objects from <script type="application/ld+json"> blocks (any nesting)."""
+    found = []
+    for blob in re.findall(r'<script[^>]+application/ld\+json[^>]*>(.*?)</script>', html, re.S | re.I):
+        try: data = json.loads(blob.strip())
+        except Exception: continue
+        stack = [data]
+        while stack:
+            x = stack.pop()
+            if isinstance(x, list): stack.extend(x)
+            elif isinstance(x, dict):
+                t = x.get("@type"); t = t if isinstance(t, list) else [t]
+                if any(isinstance(k, str) and k.endswith("Event") for k in t) and x.get("startDate"): found.append(x)
+                stack.extend(v for v in x.values() if isinstance(v, (dict, list)))
+    return found
+
 def collect_allevents():
-    """allevents.in serves a structured Markdown listing (Event Name / Date / Event URL / Venue / Price)."""
+    """allevents.in: structured Markdown listing if served, otherwise schema.org JSON-LD in the HTML."""
+    html_path = f"{SNAP}/allevents_volos.html"
     text = open(f"{SNAP}/allevents_volos.md", encoding="utf-8").read()
+    if "**Event Name**" not in text and os.path.exists(html_path):
+        out, seen = [], set()
+        for ev in jsonld_events(open(html_path, encoding="utf-8").read()):
+            url = ev.get("url") or ""
+            if not url or url in seen: continue
+            seen.add(url)
+            sd, ed = str(ev.get("startDate", "")), str(ev.get("endDate", "") or "")
+            loc = ev.get("location") or {}
+            loc = loc[0] if isinstance(loc, list) and loc else loc
+            venue = (loc.get("name") if isinstance(loc, dict) else str(loc)) or ""
+            addr = loc.get("address", "") if isinstance(loc, dict) else ""
+            addr = " ".join(str(v) for v in addr.values()) if isinstance(addr, dict) else str(addr)
+            off = ev.get("offers") or {}
+            off = off[0] if isinstance(off, list) and off else off
+            price = str(off.get("price") or off.get("lowPrice") or "") if isinstance(off, dict) else ""
+            title = re.sub(r"\s*\|\s*(Volos|Βόλος)\s*\|\s*", " | ", str(ev.get("name", ""))).strip(" |")
+            out.append(rec("allevents.in", url, title, sd[:10], ed[:10] if ed[:10] and ed[:10] != sd[:10] else None,
+                           sd[11:16] if len(sd) > 15 else None, venue, price or None, "Άλλο",
+                           context=f"{title} {venue} {addr}"))
+        if not out: SOURCE_ERRORS.append("- allevents.in: η σελίδα κατέβηκε ως HTML αλλά χωρίς εκδηλώσεις σε JSON-LD")
+        return out
+    if "**Event Name**" not in text:
+        SOURCE_ERRORS.append("- allevents.in: η σελίδα δεν ήρθε ούτε ως δομημένο Markdown ούτε με JSON-LD — χρειάζεται debug.zip")
+        return []
     out, seen = [], set()
     for block in text.split("- **Event Name**: ")[1:]:
         f = dict(re.findall(r"\*\*(Date|Event URL|Venue|Price)\*\*: ([^\n]+)", block))

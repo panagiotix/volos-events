@@ -127,7 +127,12 @@ def main():
         if not allowed(url, note, fname): continue
         try:
             raw = get(url)
-            text = raw if raw.lstrip().startswith("#") and "**Event Name**" in raw else to_text(raw)
+            if "**Event Name**" in raw:
+                text = raw                                   # already structured Markdown (allevents)
+            else:
+                text = to_text(raw)
+                if "ld+json" in raw:                         # keep the raw HTML: its schema.org JSON-LD is parsable
+                    open(f"{OUT}/{fname[:-3]}.html", "w", encoding="utf-8").write(raw)
             open(f"{OUT}/{fname}", "w", encoding="utf-8").write(text)
             note(f"OK     {fname:24} {len(text):>7} χαρακτήρες  ← {url}"); ok += 1
         except Exception as ex:
