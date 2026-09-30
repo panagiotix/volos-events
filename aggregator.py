@@ -62,6 +62,8 @@ SOURCES = [
      "note": "Ενεργό site, με λίστα πανηγυριών του καλοκαιριού, αλλά το robots.txt απαγορεύει τα άρθρα. Χρειάζεται άδεια ή αποστολή feed."},
     {"tier": "Υποβολές", "name": "Φόρμα υποβολής (εκδήλωση, iCal, RSS, ιστοσελίδα)", "url": "", "status": "ok",
      "note": "Ό,τι εγκρίνει ο διαχειριστής εξάγεται ως submissions.json και διαβάζεται εδώ. Τα feeds iCal/RSS ανανεώνονται σε κάθε εκτέλεση."},
+    {"tier": "Κορμός", "name": "Μουσείο της Πόλης του Βόλου, εκθέσεις", "url": "https://vmoc.gr/index.php/Site_Map", "status": "ok",
+     "note": "Ο χάρτης του ιστότοπου δίνει τις εκθέσεις (νεότερη πρώτη)· κάθε σελίδα έχει «Διάρκεια» και «Πού». Νέες εκθέσεις μπαίνουν αυτόματα."},
     # tier: removed
     {"tier": "Εκτός", "name": "Ειδησεογραφικά, RSS Δήμου, ραδιόφωνα, τμήματα ΠΘ", "url": "", "status": "removed",
      "note": "Αφαιρέθηκαν: τα άρθρα θέλουν LLM για ημερομηνία και χώρο, τα τμήματα βγήκαν από το scope."},
@@ -92,6 +94,7 @@ def mk_date(day, month_word, year=None):
 # ------------------------------------------------------------------ venues & areas
 VENUES = {
     "theatro": ("Δημοτικό Θέατρο Βόλου «Βαγγέλης Παπαθανασίου»", ["βαγγελης παπαθανασιου", "δημοτικο θεατρο βολου", "vangelis papathanasiou"]),
+    "vmoc": ("Μουσείο της Πόλης του Βόλου", ["μουσειο της πολης του βολου", "μουσειο πολης βολου"]),
     "achilleion": ("Κινηματοθέατρο Αχίλλειον", ["αχιλλειον", "achilleion"]),
     "ekthesiako": ("Εκθεσιακό Κέντρο Βόλου", ["εκθεσιακο κεντρο βολου"]),
     "demetrias": ("Αρχαίο Θέατρο Δημητριάδας", ["demetrias", "δημητριαδ"]),
@@ -430,6 +433,38 @@ def collect_aogoc_live():
                        None, venue, None, "Μουσική" if "music" in fold(cat) else "Θέατρο", context=f"{title} {venue}"))
     return out
 
+
+VMOC_RANGE = re.compile(r"(\d{1,2})\s+(\S+?)(?:\s+(\d{4}))?\s*[-–—]\s*(\d{1,2})\s+(\S+?)\s+(\d{4})")
+
+def parse_vmoc(text):
+    """One exhibition page → record, or None (no clear 'Διάρκεια' → not guessed)."""
+    url = (re.search(r"^URL: (\S+)", text, re.M) or [None, ""])[1]
+    dur = re.search(r"Διάρκεια:\**\s*([^\n]+)", text)
+    m = VMOC_RANGE.search(dur.group(1)) if dur else None
+    if not m:
+        return None
+    d1, m1, y1, d2, m2, y2 = m.groups()
+    mo1, mo2 = month_num(m1), month_num(m2)
+    if not (mo1 and mo2): return None
+    y2 = int(y2); y1 = int(y1) if y1 else (y2 if mo1 <= mo2 else y2 - 1)
+    start, end = date(y1, mo1, int(d1)).isoformat(), date(y2, mo2, int(d2)).isoformat()
+    where = re.search(r"Πού:\**\s*([^\n]+)", text)
+    venue = re.sub(r"[*_]", "", where.group(1)).strip() if where else "Μουσείο της Πόλης του Βόλου"
+    t = re.search(r"\*\*«(.+?)»\*\*", text.replace("****", ""))
+    title = t.group(1).strip() if t else (re.search(r"^title: (.+?) - Μουσείο", text, re.M) or [None, "Έκθεση"])[1]
+    return rec("Μουσείο Πόλης Βόλου", url, f"Έκθεση «{title}»", start, end if end != start else None, None,
+               venue, "0" if "ελεύθερη" in fold(text) else None, "Εκθέσεις", context=f"{title} {venue}")
+
+def collect_vmoc():
+    d = f"{SNAP}/vmoc"
+    if not os.path.isdir(d): raise FileNotFoundError(d)
+    out = []
+    for fn in sorted(os.listdir(d)):
+        r = parse_vmoc(open(f"{d}/{fn}", encoding="utf-8").read())
+        if r: out.append(r)
+        else: SOURCE_ERRORS.append(f"- Μουσείο Πόλης: η σελίδα {fn} δεν έχει καθαρή γραμμή «Διάρκεια» — παραλείφθηκε")
+    return out
+
 # ------------------------------------------------------------------ dedup
 def film_key(t): return norm(t.split(" - ")[0].replace("Encore", ""))
 
@@ -573,6 +608,7 @@ def run():
     reg, rej = safe(collect_region); raw += reg
     if LIVE:
         raw += safe(collect_public_live) + safe(collect_tours_live) + safe(collect_fever_live) + safe(collect_aogoc_live)
+        raw += safe(collect_vmoc)
         for fn, f in ((collect_artandlife, "artandlife_volos.md"), (collect_mood, "mood_volos.md")):
             if os.path.exists(f"{SNAP}/{f}"):
                 got = safe(fn); raw += got

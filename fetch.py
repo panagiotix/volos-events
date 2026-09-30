@@ -45,6 +45,8 @@ PROBES = [
     "https://www.artandlife.gr/feed",
     "https://events.musicofourdesire.com/sitemap.xml",
 ]
+VMOC_SITEMAP = "https://vmoc.gr/index.php/Site_Map"
+VMOC_MAX = 8                  # newest exhibitions come first in the menu
 TOUR_SKIP = ("/cinema/", "/museums", "/streaming", "/subscriptions", "/voucher")
 MAX_TOURS = 120
 
@@ -154,6 +156,25 @@ def main():
         time.sleep(1.5)
 
     note(f"Περιοδείες: {tok}/{min(len(tours), MAX_TOURS)} σελίδες κατέβηκαν")
+
+    # Museum of the City of Volos: the "Εκθέσεις" menu lists temporary exhibitions, newest first
+    os.makedirs(f"{OUT}/vmoc", exist_ok=True)
+    vok = 0
+    if allowed(VMOC_SITEMAP, note, "vmoc sitemap"):
+        try:
+            smap = to_text(get(VMOC_SITEMAP))
+            block = smap.split("[Εκθέσεις](", 1)[1].split("[Δίκτυο Μουσείων](", 1)[0]
+            pages = re.findall(r"\]\((https://vmoc\.gr/index\.php/[^\s)]+)", block)[:VMOC_MAX]
+            for n, url in enumerate(pages):
+                if not allowed(url, note, "vmoc"): continue
+                try:
+                    open(f"{OUT}/vmoc/{n:02d}.md", "w", encoding="utf-8").write(f"URL: {url}\n\n" + to_text(get(url))); vok += 1
+                except Exception as ex:
+                    note(f"ERR    vmoc {url}: {why_blocked(ex)}")
+                time.sleep(1.5)
+        except Exception as ex:
+            note(f"ERR    vmoc sitemap: {why_blocked(ex)}")
+    note(f"Μουσείο Πόλης: {vok} σελίδες εκθέσεων κατέβηκαν")
     note(f"Κύριες σελίδες: {ok}/{len(PAGES)} κατέβηκαν")
     log.close()
     if ok < len(PAGES) // 2:
