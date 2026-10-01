@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Τι γίνεται στον Βόλο και στο Πήλιο</title>
+<title>VOLTA — Τι γίνεται στον Βόλο και στο Πήλιο</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=GFS+Didot&family=Commissioner:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -23,6 +23,14 @@ body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.55 Commis
 .wrap{max-width:980px;margin:0 auto;padding:40px 20px 64px}
 h1{font:400 clamp(44px,8vw,84px)/1 "GFS Didot","Times New Roman",serif;margin:0 0 14px;color:var(--gulf);letter-spacing:-.01em}
 .lede{max-width:60ch;color:var(--muted);margin:0 0 28px}
+.lede b{color:var(--ink);font-weight:600;font-size:1.08em}
+.brand{margin:0 0 14px;line-height:0}
+.brand .volta{display:block;width:min(360px,92%);height:auto}
+.brand .on-dark{display:none}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .brand .on-light{display:none} :root:not([data-theme="light"]) .brand .on-dark{display:block} }
+:root[data-theme="dark"] .brand .on-light{display:none}
+:root[data-theme="dark"] .brand .on-dark{display:block}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .stats{display:flex;flex-wrap:wrap;gap:8px 28px;margin:0 0 30px;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:15px}
 .stats b{font-weight:600;color:var(--ink)}
 .tabs{display:flex;gap:0;margin:0 0 22px;border-bottom:2px solid var(--line)}
@@ -156,8 +164,12 @@ summary{cursor:pointer;font-weight:600}
 </head>
 <body>
 <div class="wrap">
-  <h1>Τι γίνεται στον Βόλο</h1>
-  <p class="lede">Πρωτότυπο που μαζεύει αυτόματα εκδηλώσεις για τον Βόλο και το Πήλιο, μόνο από δομημένες πηγές (πλατφόρμες εκδηλώσεων, εισιτηρίων, Περιφέρεια, Πανεπιστήμιο), χωρίς τεχνητή νοημοσύνη. Ενημέρωση: <span class="gen"></span>.</p>
+  <h1 class="brand">
+    <img class="volta on-light" src="assets/volta_dark_ink.png" alt="" width="1000" height="350">
+    <img class="volta on-dark" src="assets/volta_light_ink.png" alt="" width="1000" height="350">
+    <span class="sr">VOLTA — Τι γίνεται στον Βόλο</span>
+  </h1>
+  <p class="lede"><b>Εκδηλώσεις για τον Βόλο και το Πήλιο</b><br><span class="upd">Ενημέρωση: <span class="gen"></span></span></p>
   <div class="stats" id="stats"></div>
   <div class="actions"><button type="button" class="cta" id="openSubmit" hidden>＋ Πρόσθεσε εκδήλωση ή πηγή</button><a href="#admin" id="adminLink" class="adminlink" hidden></a></div>
   <div class="tabs" role="tablist" id="tabs"></div>

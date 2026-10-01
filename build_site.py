@@ -24,4 +24,6 @@ html = html.replace("__DATA__", json.dumps(data, ensure_ascii=False)).replace("_
 os.makedirs(f"{HERE}/_site", exist_ok=True)
 open(f"{HERE}/_site/index.html", "w", encoding="utf-8").write(html)
 shutil.copy(f"{HERE}/events.ics", f"{HERE}/_site/events.ics")
+if os.path.isdir(f"{HERE}/assets"):                      # logo and other static files
+    shutil.copytree(f"{HERE}/assets", f"{HERE}/_site/assets", dirs_exist_ok=True)
 print(f"_site/ έτοιμο: {len(data['events'])} εκδηλώσεις")
