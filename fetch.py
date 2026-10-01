@@ -87,12 +87,26 @@ _OPENER = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.co
 
 MARKDOWN_OK = ("allevents.in",)   # sites that offer a Markdown version of the page: ask for it
 
-def get(url):
+def get(url, attempts=3):
+    """Slow servers (e.g. the 500 KB Public.gr list) get more time; 4xx errors are not retried."""
+    last = None
+    for i in range(attempts):
+        try:
+            return _get_once(url, timeout=30 * (i + 1))
+        except urllib.error.HTTPError as e:
+            if e.code < 500: raise
+            last = e
+        except (TimeoutError, urllib.error.URLError, ConnectionError, OSError) as e:
+            last = e
+        time.sleep(5 * (i + 1))
+    raise last
+
+def _get_once(url, timeout):
     h = dict(HEADERS)
     if any(d in url for d in MARKDOWN_OK):
         h["Accept"] = "text/markdown, text/html;q=0.8"
     req = urllib.request.Request(url, headers=h)
-    with _OPENER.open(req, timeout=30) as r:
+    with _OPENER.open(req, timeout=timeout) as r:
         return r.read().decode(r.headers.get_content_charset() or "utf-8", "replace")
 
 def why_blocked(ex):
