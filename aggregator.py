@@ -68,8 +68,8 @@ SOURCES = [
      "note": "Δίνει τη λίστα σε δομημένο Markdown (όνομα, ημερομηνία, χώρος, τιμή). Φέρνει και εκδηλώσεις συλλογικοτήτων."},
     {"tier": "Κορμός", "name": "Δίκτυο Βιβλιοθηκών Δήμου Βόλου (diki.gr)", "url": "http://www.diki.gr/index.php/Site_Map", "status": "ok",
      "note": "Μενού «Εκδηλώσεις» (νεότερη πρώτη)· κάθε σελίδα: είδος, τίτλος, «Πέμπτη 11 Ιουνίου 2026, 7:00 μμ», χώρος."},
-    {"tier": "Εκτός", "name": "Public Events (καταστήματα Public)", "url": "https://events.public.gr/events.php?region=%CE%92%CF%8C%CE%BB%CE%BF%CF%82", "status": "sparse",
-     "note": "Σήμερα 0 εκδηλώσεις για Βόλο· ο parser γράφεται όταν εμφανιστεί η πρώτη."},
+    {"tier": "Εισιτήρια", "name": "Public Events (κατάστημα Public Βόλου)", "url": "https://events.public.gr/events.php?region=%CE%92%CF%8C%CE%BB%CE%BF%CF%82", "status": "ok",
+     "note": "Η λίστα γεμίζει με JavaScript· σύνδεσμοι από λίστα/sitemap/public_events_urls.txt, και για κάθε εκδήλωση το .ics της."},
     # tier: removed
     {"tier": "Εκτός", "name": "Ειδησεογραφικά, RSS Δήμου, ραδιόφωνα, τμήματα ΠΘ", "url": "", "status": "removed",
      "note": "Αφαιρέθηκαν: τα άρθρα θέλουν LLM για ημερομηνία και χώρο, τα τμήματα βγήκαν από το scope."},
@@ -633,6 +633,25 @@ def collect_diki():
         else: SOURCE_ERRORS.append(f"- Βιβλιοθήκες: η σελίδα {fn} δεν έχει αναγνωρίσιμη ημερομηνία — παραλείφθηκε")
     return out
 
+
+def collect_public_events():
+    """events.public.gr: one .ics per event (store events: book presentations, kids' activities...)."""
+    d = f"{SNAP}/public_events"
+    if not os.path.isdir(d): raise FileNotFoundError(d)
+    out = []
+    for fn in sorted(os.listdir(d)):
+        text = open(f"{d}/{fn}", encoding="utf-8").read()
+        page = (re.search(r"^X-SOURCE-URL:(\S+)", text, re.M) or [None, ""])[1]
+        for ev in parse_ics(text):
+            venue = ev["venue"]
+            if "βολο" not in fold(venue): continue           # other Public stores
+            low = fold(ev["title"] + " " + text)
+            cat = "Βιβλίο" if "βιβλι" in low else "Παιδικά" if "παιδι" in low else "Άλλο"
+            out.append(rec("Public Events", page or ev["url"] or "https://events.public.gr/", ev["title"],
+                           ev["start"], ev["end"], ev["time"], venue.split(",")[0], "0" if "ελευθερ" in low else None,
+                           cat, context=f"{ev['title']} {venue}"))
+    return out
+
 # ------------------------------------------------------------------ dedup
 def film_key(t): return norm(t.split(" - ")[0].replace("Encore", ""))
 
@@ -776,7 +795,7 @@ def run():
     reg, rej = safe(collect_region); raw += reg
     if LIVE:
         raw += safe(collect_public_live) + safe(collect_tours_live) + safe(collect_fever_live) + safe(collect_aogoc_live)
-        raw += safe(collect_vmoc) + safe(collect_allevents) + safe(collect_diki)
+        raw += safe(collect_vmoc) + safe(collect_allevents) + safe(collect_diki) + safe(collect_public_events)
         for fn, f in ((collect_artandlife, "artandlife_volos.md"), (collect_mood, "mood_volos.md")):
             if os.path.exists(f"{SNAP}/{f}"):
                 got = safe(fn); raw += got

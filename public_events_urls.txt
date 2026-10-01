@@ -1,0 +1,4 @@
+# Σύνδεσμοι εκδηλώσεων από το events.public.gr (μία ανά γραμμή).
+# Το script βρίσκει μόνο του όσους μπορεί (λίστα, sitemap)· εδώ προσθέτεις όσους λείπουν.
+# Οι περασμένες εκδηλώσεις αγνοούνται αυτόματα, δεν χρειάζεται να τις σβήνεις.
+https://events.public.gr/lina-mousioni-biblio-iraklis-101-adespota-koutavia-public/106

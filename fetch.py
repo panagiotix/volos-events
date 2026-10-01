@@ -48,6 +48,10 @@ PROBES = [
 ]
 VMOC_SITEMAP = "https://vmoc.gr/index.php/Site_Map"
 DIKI_SITEMAP = "http://www.diki.gr/index.php/Site_Map"
+PEV_LIST = "https://events.public.gr/events.php?region=%CE%92%CF%8C%CE%BB%CE%BF%CF%82"
+PEV_SITEMAP = "https://events.public.gr/sitemap.xml"
+PEV_LINK = re.compile(r"(?:https://events\.public\.gr)?/([a-z0-9][a-z0-9-]+/\d+)(?=[\s\"')<?#]|$)")
+PEV_MAX = 60
 DIKI_MAX = 10
 VMOC_MAX = 8                  # newest exhibitions come first in the menu
 TOUR_SKIP = ("/cinema/", "/museums", "/streaming", "/subscriptions", "/voucher")
@@ -223,6 +227,39 @@ def main():
         except Exception as ex:
             note(f"ERR    diki sitemap: {why_blocked(ex)}")
     note(f"Βιβλιοθήκες Βόλου: {dok} σελίδες εκδηλώσεων κατέβηκαν")
+
+    # Public stores (events.public.gr): the list is filled by JavaScript, so links are gathered from
+    # the list HTML (if any), the sitemap (if any) and public_events_urls.txt; each event offers an .ics file
+    os.makedirs(f"{OUT}/public_events", exist_ok=True)
+    links, found_by = [], {}
+    def add(path, how):
+        if path not in links: links.append(path); found_by[how] = found_by.get(how, 0) + 1
+    for how, url in (("λίστα", PEV_LIST), ("sitemap", PEV_SITEMAP)):
+        if not allowed(url, note, f"public events {how}"): continue
+        try:
+            for path in PEV_LINK.findall(get(url)):
+                if not path.startswith(("images/", "css/", "js/")): add(path, how)
+        except Exception as ex:
+            note(f"INFO   public events {how}: {why_blocked(ex)}")
+        time.sleep(1.5)
+    try:
+        for line in open(f"{HERE}/public_events_urls.txt", encoding="utf-8"):
+            m = PEV_LINK.search(line.strip())
+            if m and not line.lstrip().startswith("#"): add(m.group(1), "αρχείο")
+    except FileNotFoundError:
+        pass
+    pok = 0
+    for n, path in enumerate(links[:PEV_MAX]):
+        url = f"https://events.public.gr/{path}?download=ics"
+        if not allowed(url, note, "public event"): continue
+        try:
+            body = get(url)
+            if "BEGIN:VEVENT" in body:
+                open(f"{OUT}/public_events/{n:02d}.ics", "w", encoding="utf-8").write(f"X-SOURCE-URL:https://events.public.gr/{path}\n" + body); pok += 1
+        except Exception as ex:
+            note(f"ERR    public event {path}: {why_blocked(ex)}")
+        time.sleep(1.5)
+    note(f"Public Events: {pok} εκδηλώσεις (.ics) από {len(links)} συνδέσμους — βρέθηκαν από: {found_by or 'πουθενά'}")
     note(f"Κύριες σελίδες: {ok}/{len(PAGES)} κατέβηκαν")
     log.close()
     if ok < len(PAGES) // 2:
