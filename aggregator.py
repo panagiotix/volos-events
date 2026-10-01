@@ -449,7 +449,7 @@ def parse_vmoc(text):
     dur = re.search(r"Διάρκεια:\**\s*([^\n]+)", text)
     m = VMOC_RANGE.search(dur.group(1)) if dur else None
     if not m:
-        return None
+        return parse_vmoc_event(text, url)          # one-day event page: «Πότε:» / «Ώρα:»
     d1, m1, y1, d2, m2, y2 = m.groups()
     mo1, mo2 = month_num(m1), month_num(m2)
     if not (mo1 and mo2): return None
@@ -462,6 +462,43 @@ def parse_vmoc(text):
     return rec("Μουσείο Πόλης Βόλου", url, f"Έκθεση «{title}»", start, end if end != start else None, None,
                venue, "0" if "ελεύθερη" in fold(text) else None, "Εκθέσεις", context=f"{title} {venue}")
 
+
+def parse_vmoc_event(text, url):
+    """Museum event page (not an exhibition): 'Πότε: Παρασκευή 11 Σεπτεμβρίου 2026', 'Ώρα: 7:00 μ.μ.'."""
+    body = text.split("[Επικοινωνία](", 1)[-1]
+    when = re.search(r"Πότε:\**\s*([^\n]+)", body)
+    m = DIKI_WHEN.search(when.group(1) if when else body)
+    if not m: return None
+    d1, m1, y1, d2, m2, y2, hh, mm, ap = m.groups()
+    mo = month_num(m1)
+    if not mo: return None
+    start = date(int(y1), mo, int(d1)).isoformat()
+    end = date(int(y2), month_num(m2), int(d2)).isoformat() if d2 and month_num(m2) else None
+    tm = re.search(r"Ώρα:\**\s*(\d{1,2})(?:[:.](\d{2}))?\s*(π\.?\s?μ|μ\.?\s?μ)?", body)
+    if not tm:                                         # "Παρασκευή 11 Σεπτεμβρίου 2026, 7 μ.μ." in the header
+        tm = re.search(re.escape(m.group(0)) + r",?\s*(\d{1,2})(?:[:.](\d{2}))?\s*(π\.?\s?μ|μ\.?\s?μ)", body)
+    time = None
+    if tm:
+        h = int(tm.group(1)); mi = tm.group(2) or "00"
+        if tm.group(3) and fold(tm.group(3)).startswith("μ") and h < 12: h += 12
+        time = f"{h:02d}:{mi}"
+    elif hh:
+        h = int(hh) + (12 if ap and fold(ap).startswith("μ") and int(hh) < 12 else 0)
+        time = f"{h:02d}:{mm}"
+    head = body[:m.start()] if not when else body[:when.start()]
+    t = re.search(r"\*\*«(.+?)»\*\*", head.replace("****", "")) or re.search(r"\*\*([^*\n]{4,})\*\*", head)
+    if not t: return None
+    title = t.group(1).strip()
+    kind = next((l.strip() for l in head.splitlines() if l.strip() and not l.strip().startswith(("-", "*", "!", "[", "http")) and ")" not in l), "")
+    sub = head[t.end():].strip().splitlines()
+    sub = sub[0].strip() if sub and not DIKI_WHEN.search(sub[0]) and not sub[0].startswith("**") else ""
+    where = re.search(r"Πού:\**\s*([^\n]+)", body)
+    venue = re.sub(r"[*_]", "", where.group(1)).strip() if where else "Μουσείο της Πόλης του Βόλου"
+    full = f"«{title}»" + (f" – {sub}" if sub else "")
+    cat = "Ομιλίες" if re.search(r"ομιλ|διαλεξ|τιμητικ|παρουσιασ", fold(kind + " " + sub)) else "Άλλο"
+    return rec("Μουσείο Πόλης Βόλου", url, full, start, end if end and end != start else None, time,
+               venue, None, cat, context=f"{title} {venue}")
+
 def collect_vmoc():
     d = f"{SNAP}/vmoc"
     if not os.path.isdir(d): raise FileNotFoundError(d)
@@ -469,7 +506,7 @@ def collect_vmoc():
     for fn in sorted(os.listdir(d)):
         r = parse_vmoc(open(f"{d}/{fn}", encoding="utf-8").read())
         if r: out.append(r)
-        else: SOURCE_ERRORS.append(f"- Μουσείο Πόλης: η σελίδα {fn} δεν έχει καθαρή γραμμή «Διάρκεια» — παραλείφθηκε")
+        else: SOURCE_ERRORS.append(f"- Μουσείο Πόλης: η σελίδα {fn} δεν έχει αναγνωρίσιμη «Διάρκεια» ή «Πότε» — παραλείφθηκε")
     return out
 
 
@@ -549,7 +586,7 @@ def collect_allevents():
     return out
 
 
-DIKI_WHEN = re.compile(r"(?:Δευτέρα|Τρίτη|Τετάρτη|Πέμπτη|Παρασκευή|Σάββατο|Κυριακή)\s+(\d{1,2})\s+(\S+)\s+(\d{4})(?:\s*[-–]\s*(?:\S+\s+)?(\d{1,2})\s+(\S+)\s+(\d{4}))?(?:,?\s*(?:ώρα\s*)?(\d{1,2})[:.](\d{2})\s*(π\.?\s?μ|μ\.?\s?μ)?)?", re.I)
+DIKI_WHEN = re.compile(r"(?:Δευτέρα|Τρίτη|Τετάρτη|Πέμπτη|Παρασκευή|Σάββατο|Κυριακή)\s+(\d{1,2})\s+(\S+)\s+(\d{4})(?:\s*[-–]\s*(?:\S+\s+)?(\d{1,2})\s+(\S+)\s+(\d{4}))?(?:,?\s*(?:ώρα\s*)?(\d{1,2})(?:[:.](\d{2}))?\s*(π\.?\s?μ\.?|μ\.?\s?μ\.?)?)?", re.I)
 
 def parse_diki(text):
     """Library event page: [type] / **title** / 'Πέμπτη 11 Ιουνίου 2026, 7:00 μμ' / **venue**. No clear date → None."""
@@ -564,7 +601,9 @@ def parse_diki(text):
     start = date(int(y1), mo1, int(d1)).isoformat()
     end = date(int(y2), month_num(m2), int(d2)).isoformat() if d2 and month_num(m2) else None
     time = None
+    if hh and not mm and not ap: hh = None                 # a lone number after the date is not a time
     if hh:
+        mm = mm or "00"
         h = int(hh)
         if ap and fold(ap).startswith("μ") and h < 12: h += 12
         elif not ap and h < 9: h += 12                        # "7:00" at a library event = evening
