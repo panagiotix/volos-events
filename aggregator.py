@@ -216,6 +216,7 @@ def collect_uth():
         if r: end = mk_date(r.group(3), r.group(4), r.group(5))
         venue = "Τμήμα Αρχιτεκτόνων Μηχανικών ΠΘ" if "Συνέδριο στον Βόλο" in title else ""
         cat = "Συνέδρια" if "Συνέδρι" in title else "Περίπατοι & τέχνη" if "διαδρομή" in title else "Πανεπιστημιακά"
+        url = url if url.startswith("http") else "https://www.uth.gr/" + url.lstrip("/")
         out.append(rec("ΠΘ /events", url, title, start, end, None, venue, category=cat, context=f"{title} {snippet}"))
     return out
 
@@ -669,6 +670,29 @@ def same_event(a, b):
     if (va is None or vb is None) and (len(shared) >= 3 or sim > 0.6): return True
     return False
 
+SOURCE_BASE = {
+    "ΠΘ /events": "https://www.uth.gr", "TicketServices": "https://www.ticketservices.gr",
+    "Περιφέρεια": "https://app.thessaly.gov.gr", "Δήμος Ζαγοράς": "https://www.dimos-zagoras-mouresiou.gr",
+    "Public.gr": "https://tickets.public.gr", "Public.gr (περιοδεία)": "https://tickets.public.gr",
+    "Fever": "https://feverup.com", "CinePortal": "https://cineportal.gr", "Μουσείο Πόλης Βόλου": "https://vmoc.gr",
+    "Βιβλιοθήκες Βόλου": "http://www.diki.gr", "Public Events": "https://events.public.gr",
+    "allevents.in": "https://allevents.in", "Όλη η Ελλάδα ένας Πολιτισμός": "https://allofgreeceone.culture.gov.gr",
+}
+LINK_LOG = []
+
+def absolute_links(rows):
+    """Every link shown on the page must be absolute, or the browser resolves it against our own site (404)."""
+    for r in rows:
+        u = (r.get("url") or "").strip()
+        if not u or u == "#" or u.startswith(("http://", "https://")): continue
+        base = SOURCE_BASE.get(r["source"]) or next((v for k, v in SOURCE_BASE.items() if r["source"].startswith(k)), None)
+        if base:
+            r["url"] = base + "/" + u.lstrip("/")
+        else:
+            LINK_LOG.append(f"- {r['source']}: σχετικός σύνδεσμος χωρίς γνωστή βάση: {u}")
+            r["url"] = "#"
+    return rows
+
 def dedupe(rows):
     merged = []
     for r in rows:
@@ -703,7 +727,7 @@ def write_log(raw, events, rejected):
          "| Πηγή | Εγγραφές | Στη σελίδα ή στις περασμένες |", "|---|---:|---:|"]
     for src, n in per_src.most_common():
         L.append(f"| {src} | {n} | {kept_src.get(src, 0)} |")
-    L += ["", "## Σφάλματα πηγών", ""] + (SOURCE_ERRORS or ["- Κανένα."])
+    L += ["", "## Σφάλματα πηγών", ""] + (SOURCE_ERRORS + LINK_LOG or ["- Κανένα."])
     L += ["", "## Τίτλοι με κεφαλαία που έμειναν ως έχουν", "",
           "Πρόσθεσε τις λέξεις στο `accents.txt` με σωστό τονισμό (κεφαλαίο πρώτο γράμμα = κύριο όνομα).", ""]
     missing = sorted({w for _, ws in CASING_LOG for w in ws})
@@ -829,7 +853,7 @@ def run():
         r["past"] = (not r["running"]) and bool(r["start"]) and (r["end"] or r["start"]) < TODAY.isoformat()
         kept.append(r)
 
-    events = dedupe(kept)
+    events = dedupe(absolute_links(kept))
     # ALL-CAPS titles → normal Greek, only where every word's accent is known
     lex = casing.build_lexicon([SNAP, f"{HERE}/snapshots"], ["/usr/share/hunspell/el_GR.dic"], f"{HERE}/accents.txt")
     for e in events:
