@@ -1,9 +1,16 @@
-name: Καθημερινή ενημέρωση
+name: Ενημέρωση (00:07, 10:07, 16:07 ώρα Ελλάδας)
 
+# GitHub schedules run in UTC and do not follow daylight saving time.
+# Two schedules, one per season; the "gate" job lets only the one that matches
+# the current Greek time run, so the site updates at 00:07, 10:07 and 16:07
+# Greek time all year round (minute :07 avoids the busy top of the hour).
 on:
   schedule:
-    - cron: "0 4,16 * * *"   # 04:00 & 16:00 UTC = 07:00 & 19:00 θερινή ώρα Ελλάδας (06:00 & 18:00 χειμερινή)
-  workflow_dispatch:          # κουμπί «Run workflow» για χειροκίνητη εκτέλεση
+    - cron: "7 21,7,13 * * *"    # θερινή ώρα (UTC+3): 00:07, 10:07, 16:07
+    - cron: "7 22,8,14 * * *"    # χειμερινή ώρα (UTC+2): 00:07, 10:07, 16:07
+  workflow_dispatch:              # κουμπί «Run workflow»
+  push:
+    branches: [main]              # κάθε git push ανανεώνει τη σελίδα
 
 permissions:
   contents: read
@@ -15,7 +22,27 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      - id: check
+        env:
+          EVENT: ${{ github.event_name }}
+          SCHEDULE: ${{ github.event.schedule }}
+        run: |
+          if [ "$EVENT" != "schedule" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          OFFSET=$(TZ=Europe/Athens date +%z)            # +0300 θερινή, +0200 χειμερινή
+          if   [ "$OFFSET" = "+0300" ] && [ "$SCHEDULE" = "7 21,7,13 * * *" ]; then RUN=true
+          elif [ "$OFFSET" = "+0200" ] && [ "$SCHEDULE" = "7 22,8,14 * * *" ]; then RUN=true
+          else RUN=false; fi
+          echo "Ώρα Ελλάδας: $(TZ=Europe/Athens date '+%H:%M %z') · πρόγραμμα: $SCHEDULE · εκτέλεση: $RUN"
+          echo "run=$RUN" >> "$GITHUB_OUTPUT"
+
   build:
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
