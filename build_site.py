@@ -29,6 +29,7 @@ if supa.enabled():
             supa_note = f"Supabase: {n} εκδηλώσεις στάλθηκαν, {len(published)} δημοσιευμένες διαβάστηκαν πίσω"
     except Exception as ex:                            # Supabase down/paused: keep the collected events
         supa_note = f"Supabase: σφάλμα ({type(ex).__name__}: {ex}) — η σελίδα χτίστηκε από τη συλλογή"
+if supa.enabled(): supa_note += f" · κλειδί workflow: {supa.key_role()}"
 print(supa_note)
 try:
     with open(f"{HERE}/log.md", "a", encoding="utf-8") as lf: lf.write(f"\n## Supabase\n\n- {supa_note}\n")

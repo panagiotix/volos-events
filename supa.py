@@ -19,14 +19,31 @@ KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
 def enabled():
     return bool(URL and KEY)
 
+def key_role():
+    """Which kind of key is in SUPABASE_SERVICE_KEY — for the log only."""
+    import base64
+    if KEY.startswith("sb_secret_"): return "νέου τύπου secret (sb_secret_…) — χρησιμοποίησε το legacy service_role"
+    if KEY.startswith("sb_publishable_"): return "δημόσιο νέου τύπου (sb_publishable_…) — λάθος κλειδί"
+    try:
+        payload = KEY.split(".")[1]; payload += "=" * (-len(payload) % 4)
+        role = json.loads(base64.urlsafe_b64decode(payload)).get("role", "?")
+        return {"service_role": "service_role (σωστό)", "anon": "anon — ΛΑΘΟΣ: εδώ χρειάζεται το service_role"}.get(role, role)
+    except Exception:
+        return "μη αναγνωρίσιμο κλειδί"
+
 def _req(method, path, body=None, prefer=None):
     h = {"apikey": KEY, "Authorization": f"Bearer {KEY}", "Content-Type": "application/json"}
     if prefer: h["Prefer"] = prefer
     data = json.dumps(body).encode("utf-8") if body is not None else None
     req = urllib.request.Request(f"{URL}/rest/v1/{path}", data=data, headers=h, method=method)
-    with urllib.request.urlopen(req, timeout=60) as r:
-        raw = r.read().decode("utf-8")
-        return json.loads(raw) if raw.strip() else None
+    try:
+        with urllib.request.urlopen(req, timeout=60) as r:
+            raw = r.read().decode("utf-8")
+            return json.loads(raw) if raw.strip() else None
+    except urllib.error.HTTPError as e:            # keep Supabase's own explanation for the log
+        body = e.read().decode("utf-8", "replace")[:300]
+        table = path.split("?")[0]
+        raise RuntimeError(f"HTTP {e.code} στο «{table}»: {body}") from None
 
 # ---------------------------------------------------------------- Athens time (no tz database needed)
 def _last_sunday(y, m):
