@@ -100,6 +100,17 @@ summary{cursor:pointer;font-weight:600}
 .live.done .lbl{color:var(--muted)}
 .rej span{color:var(--muted)}
 .how{font-size:12.5px;color:var(--muted);margin-left:6px}
+.replink{display:none;font:500 12.5px Commissioner,sans-serif;background:none;border:0;padding:0;margin-left:10px;color:var(--muted);text-decoration:underline;cursor:pointer}
+body.can-report .replink{display:inline}
+.replink:hover{color:var(--kiln)}
+.replink:focus-visible{outline:2px solid var(--kiln);outline-offset:2px}
+#repDlg{max-width:min(520px,92vw);border:1px solid var(--line);border-radius:12px;padding:20px;background:var(--paper);color:var(--ink)}
+#repDlg::backdrop{background:rgba(0,0,0,.45)}
+#repDlg h2{font:400 26px/1.15 "GFS Didot",serif;margin:0 0 4px;color:var(--gulf)}
+#repDlg .fld{margin:10px 0}
+#repDlg select,#repDlg textarea,#repDlg input{width:100%;box-sizing:border-box;font:15px Commissioner,sans-serif;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg,var(--paper));color:var(--ink)}
+#repDlg label{display:block;font-size:13.5px;font-weight:600;margin-bottom:4px}
+#repDlg .acts{display:flex;gap:10px;justify-content:flex-end;margin-top:14px}
 .ev{display:grid;grid-template-columns:1fr auto;gap:4px 18px;align-items:start}
 .ev>.body{min-width:0}
 .live{min-width:132px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;text-align:left;background:var(--panel);font-size:13px;line-height:1.35}
@@ -171,7 +182,7 @@ summary{cursor:pointer;font-weight:600}
   </h1>
   <p class="lede"><b>Εκδηλώσεις για τον Βόλο και το Πήλιο</b><br><span class="upd">Ενημέρωση: <span class="gen"></span></span></p>
   <div class="stats" id="stats"></div>
-  <div class="actions"><button type="button" class="cta" id="openSubmit" hidden>＋ Πρόσθεσε εκδήλωση ή πηγή</button><a href="#admin" id="adminLink" class="adminlink" hidden></a></div>
+  <div class="actions"><button type="button" class="cta" id="openSubmit" hidden>＋ Πρόσθεσε εκδήλωση ή πηγή</button></div>
   <div class="tabs" role="tablist" id="tabs"></div>
   <div class="filters" id="filters" role="group" aria-label="Κατηγορίες"></div>
   <section class="onwrap" id="onWrap" hidden><h2>Σε εξέλιξη τώρα</h2><div id="onList"></div></section>
@@ -191,13 +202,19 @@ summary{cursor:pointer;font-weight:600}
     <div id="formBody"></div>
     <div id="formMsg" class="formmsg" role="status" aria-live="polite"></div>
   </section>
-  <section class="panel" id="mine" hidden><h2>Οι υποβολές σου</h2><div id="mineList"></div></section>
-  <section class="panel" id="admin" hidden>
-    <h2>Διαχείριση υποβολών</h2>
-    <div class="kinds" id="admTabs"></div>
-    <div id="admList"></div>
-    <div class="admfoot"><button type="button" class="cta ghost" id="exportBtn">Εξαγωγή εγκεκριμένων για το pipeline (submissions.json)</button> <span id="exportMsg" class="formmsg"></span></div>
-  </section>
+
+  <dialog id="repDlg" aria-labelledby="repTitle">
+    <h2 id="repTitle">Αναφορά λάθους</h2>
+    <p class="sub" id="repWhat"></p>
+    <div class="fld"><label for="r_issue">Τι δεν είναι σωστό;</label>
+      <select id="r_issue"><option value="date">Ημερομηνία ή ώρα</option><option value="venue">Χώρος</option><option value="cancelled">Ακυρώθηκε ή αναβλήθηκε</option>
+        <option value="duplicate">Εμφανίζεται δύο φορές</option><option value="irrelevant">Δεν αφορά Βόλο/Πήλιο ή δεν είναι εκδήλωση</option><option value="other">Κάτι άλλο</option></select></div>
+    <div class="fld"><label for="r_msg">Σχόλιο (π.χ. η σωστή ώρα)</label><textarea id="r_msg" rows="3" maxlength="1000"></textarea></div>
+    <div class="fld"><label for="r_email">Email (προαιρετικό, δεν δημοσιεύεται)</label><input id="r_email" type="email" maxlength="200" autocomplete="email"></div>
+    <div class="hp" aria-hidden="true"><label for="r_web">Μην το συμπληρώσετε</label><input id="r_web" tabindex="-1" autocomplete="off"></div>
+    <div id="repMsg" class="formmsg" role="status" aria-live="polite"></div>
+    <div class="acts"><button type="button" class="cta ghost" id="repCancel">Άκυρο</button><button type="button" class="cta" id="repSend">Αποστολή</button></div>
+  </dialog>
 
   <p class="note">Τελευταία ενημέρωση: <span class="gen"></span>. Ελέγξτε πάντα την αρχική πηγή πριν από μια εκδήλωση: ώρες και χώροι μπορεί να αλλάξουν.</p>
 </div>
@@ -260,7 +277,7 @@ function evHTML(e){
   return `<div class="ev ${e.id===freshId?"fresh":""}"><div class="body"><h3>${esc(e.title)}${e.fresh?'<span class="new">νέο</span>':""}${e.manual?'<span class="badge">επιβεβαιωμένο</span>':""}${e.submitted?'<span class="badge">υποβολή</span>':""}${e.restored?'<span class="badge">επαναφορά</span>':""}</h3>
     <div class="meta">${e.date_text?esc(e.date_text)+". ":""}${esc(e.venue||"χώρος άγνωστος")}.${price} <span class="cat">${esc(e.category||"")}</span></div>
     ${e.note?`<div class="meta">${esc(e.note)}</div>`:""}
-    <div class="srcs">${multi}${e.sources.map(s=>`<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.source)}</a>`).join(", ")}<span class="how">εξαγωγή: ${esc(e.method)}</span></div></div>${liveBox(e)}</div>`;
+    <div class="srcs">${multi}${e.sources.map(s=>`<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.source)}</a>`).join(", ")}<span class="how">εξαγωγή: ${esc(e.method)}</span><button type="button" class="replink" data-id="${esc(e.id)}">Αναφορά λάθους</button></div></div>${liveBox(e)}</div>`;
 }
 let cinDay=null;
 function renderCinema(pick){
@@ -314,12 +331,12 @@ document.querySelectorAll(".gen").forEach(s=>{
 });
 renderStats(); renderTabs(); renderFilters(); renderList();
 
-/* ================= Υποβολές & διαχείριση (db + user) ================= */
-let DB=null, USER=null, UID=null, IS_ADMIN=false, KIND="event";
-let MY={items:{}}, ALLSUBS=[], SUBST={}, PUB_EVENTS=[], PUB_FEEDS=[], ADM_TAB="pending";
+/* ================= Υποβολές → Supabase ================= */
+const SB_URL="__SUPABASE_URL__", SB_ANON="__SUPABASE_ANON__";      // filled in by build_site.py (public anon key)
+const SB_READY = SB_URL.startsWith("https://") && SB_ANON.length > 20;
+let KIND="event";
 const CATS=["Θέατρο","Μουσική","Σινεμά","Εκθέσεις","Χορός","Παιδικά","Συνέδρια","Πανεπιστημιακά","Πολιτική","Αθλητισμός","Γαστρονομία","Φεστιβάλ","Άλλο"];
 const KINDNAME={event:"Εκδήλωση",ical:"Ημερολόγιο iCal",rss:"RSS feed",site:"Ιστοσελίδα"};
-const STNAME={pending:"Σε αναμονή",approved:"Εγκρίθηκε",rejected:"Απορρίφθηκε"};
 const $=id=>document.getElementById(id);
 const todayIso=()=>{const n=new Date();return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}-${String(n.getDate()).padStart(2,"0")}`;};
 const isUrl=s=>{try{const u=new URL(s);return u.protocol==="https:"||u.protocol==="http:";}catch(e){return false;}};
@@ -363,7 +380,8 @@ function renderForm(){
       ${fld("f_note","Σημείωση προς τον διαχειριστή",`<textarea id="f_note" rows="2" maxlength="500"></textarea>`,"",true)}
     </div>`;
   }
-  $("formBody").innerHTML = h + hp + `<button type="button" class="cta fbtn" id="sendBtn">Υποβολή για έγκριση</button>`;
+  const contact = `<div class="fgrid" style="margin-top:12px">${fld("f_email","Email επικοινωνίας (προαιρετικό)",`<input id="f_email" type="email" maxlength="200" autocomplete="email">`,"Δεν δημοσιεύεται· χρησιμοποιείται μόνο αν χρειαστεί διευκρίνιση για την υποβολή.",true)}</div>`;
+  $("formBody").innerHTML = h + contact + hp + `<button type="button" class="cta fbtn" id="sendBtn">Υποβολή για έγκριση</button>`;
   $("formMsg").textContent=""; $("formMsg").className="formmsg";
   $("sendBtn").onclick=submitForm;
   if(KIND==="event"){ ["f_title","f_start"].forEach(id=>$(id).addEventListener("input",checkDupe)); }
@@ -376,147 +394,92 @@ function checkDupe(){
   box.innerHTML = hits.length?`<div class="dupe"><b>Μήπως υπάρχει ήδη;</b> ${hits.map(e=>`${esc(e.title)} (${esc(e.venue||"")})`).join("; ")}. Αν είναι η ίδια εκδήλωση, δεν χρειάζεται υποβολή.</div>`:"";
 }
 function formErr(msg){$("formMsg").textContent=msg;$("formMsg").className="formmsg err";}
+// Europe/Athens offset for a given local date (+03:00 summer, +02:00 winter), via the browser's tz data
+function athensIso(day, hhmm){
+  const [y,m,d] = day.split("-").map(Number), [H,M] = (hhmm||"00:00").split(":").map(Number);
+  const asUtc = Date.UTC(y,m-1,d,H,M);
+  const parts = new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Athens",hourCycle:"h23",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"})
+    .formatToParts(new Date(asUtc)).reduce((o,p)=>(o[p.type]=p.value,o),{});
+  const shown = Date.UTC(+parts.year,+parts.month-1,+parts.day,+parts.hour,+parts.minute);
+  const off = Math.round((shown-asUtc)/36e5);
+  return `${day}T${String(H).padStart(2,"0")}:${String(M).padStart(2,"0")}:00+${String(off).padStart(2,"0")}:00`;
+}
 async function submitForm(){
-  if($("f_web").value) return;                      // honeypot: silently drop bots
+  if($("f_web").value) return;                                   // honeypot: silently drop bots
   const v=id=>($(id)?.value||"").trim();
-  const area=document.querySelector('input[name="f_area"]:checked')?.value||"volos";
-  let item={kind:KIND, area, category:v("f_cat")||"Άλλο", organizer:v("f_org"), note:v("f_note"), submittedAt:new Date().toISOString()};
-  if(!item.organizer) return formErr(KIND==="event"?"Συμπλήρωσε τον διοργανωτή.":"Συμπλήρωσε τον φορέα ή χώρο.");
+  const region=document.querySelector('input[name="f_area"]:checked')?.value||"volos";
+  const email=v("f_email");
+  if(email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return formErr("Το email δεν φαίνεται σωστό.");
+  const organizer=v("f_org");
+  if(!organizer) return formErr(KIND==="event"?"Συμπλήρωσε τον διοργανωτή.":"Συμπλήρωσε τον φορέα ή χώρο.");
+  let kind=KIND==="site"?"website":KIND, payload;
   if(KIND==="event"){
-    Object.assign(item,{title:v("f_title"),start:v("f_start"),end:v("f_end"),time:v("f_time"),venue:v("f_venue"),address:v("f_addr"),price:v("f_price"),free:$("f_free").checked,link:v("f_link")});
-    if(!item.title||!item.start||!item.venue) return formErr("Συμπλήρωσε τίτλο, ημερομηνία και χώρο.");
-    if(item.start<todayIso()) return formErr("Η ημερομηνία έχει περάσει.");
-    if(item.end&&item.end<item.start) return formErr("Η ημερομηνία λήξης είναι πριν από την έναρξη.");
-    if(item.link&&!isUrl(item.link)) return formErr("Ο σύνδεσμος πρέπει να ξεκινά με https://");
+    const f={title:v("f_title"),start:v("f_start"),end:v("f_end"),time:v("f_time"),venue:v("f_venue"),addr:v("f_addr"),price:v("f_price"),link:v("f_link")};
+    if(!f.title||!f.start||!f.venue) return formErr("Συμπλήρωσε τίτλο, ημερομηνία και χώρο.");
+    if(f.start<todayIso()) return formErr("Η ημερομηνία έχει περάσει.");
+    if(f.end&&f.end<f.start) return formErr("Η ημερομηνία λήξης είναι πριν από την έναρξη.");
+    if(f.link&&!isUrl(f.link)) return formErr("Ο σύνδεσμος πρέπει να ξεκινά με https://");
+    payload={title:f.title, description:v("f_note"), organizer, region, category:v("f_cat")||"Άλλο",
+      starts_at:athensIso(f.start,f.time), ends_at:f.end?athensIso(f.end,"23:59"):null, all_day:!f.time,
+      venue:f.addr?`${f.venue}, ${f.addr}`:f.venue, price:$("f_free").checked?"0":f.price, url:f.link};
   } else {
-    item.url=v("f_url");
-    if(!isUrl(item.url)) return formErr("Δώσε έγκυρη διεύθυνση που ξεκινά με https://");
-    if(KIND==="rss"){item.dateHint=v("f_date"); item.eventsOnly=$("f_only").checked;}
+    const url=v("f_url");
+    if(!isUrl(url)) return formErr("Δώσε έγκυρη διεύθυνση που ξεκινά με https://");
+    payload={url, name:organizer, region, category:v("f_cat")||"Άλλο", note:v("f_note")};
+    if(KIND==="rss"){ payload.date_hint=v("f_date"); payload.events_only=$("f_only").checked; }
   }
-  const recent=Object.values(MY.items||{}).filter(x=>Date.now()-Date.parse(x.submittedAt)<3600e3).length;
-  if(recent>=10) return formErr("Πολλές υποβολές την τελευταία ώρα. Δοκίμασε ξανά αργότερα.");
-  const id=`${Date.now().toString(36)}${Math.random().toString(36).slice(2,6)}`;
-  item.id=id;
+  let recent=[]; try{ recent=JSON.parse(localStorage.getItem("volta-sent")||"[]").filter(t=>Date.now()-t<3600e3); }catch(e){}
+  if(recent.length>=5) return formErr("Πολλές υποβολές την τελευταία ώρα. Δοκίμασε ξανά αργότερα.");
   $("sendBtn").disabled=true;
   try{
-    const ref=DB.doc(`data/users/${UID}`);
-    const snap=await ref.get();
-    const cur=snap.exists?snap.data():{items:{}};
-    const items={...(cur.items||{}), [id]:item};
-    await ref.set({items});
-    $("formMsg").textContent="Η υποβολή στάλθηκε. Θα εμφανιστεί μόλις εγκριθεί."; $("formMsg").className="formmsg";
-    renderForm(); $("formMsg").textContent="Η υποβολή στάλθηκε. Θα εμφανιστεί μόλις εγκριθεί.";
-  }catch(e){ formErr("Η υποβολή δεν αποθηκεύτηκε. Ίσως δεν έχεις δικαίωμα υποβολής σε αυτή τη σελίδα."); $("sendBtn").disabled=false; }
+    const r=await fetch(`${SB_URL}/rest/v1/submissions`,{method:"POST",
+      headers:{"apikey":SB_ANON,"Authorization":`Bearer ${SB_ANON}`,"Content-Type":"application/json","Prefer":"return=minimal"},
+      body:JSON.stringify({kind, payload, contact_email:email||null})});
+    if(!r.ok) throw new Error(r.status);
+    try{ recent.push(Date.now()); localStorage.setItem("volta-sent",JSON.stringify(recent)); }catch(e){}
+    renderForm();
+    $("formMsg").textContent="Ευχαριστούμε! Η υποβολή στάλθηκε και θα εμφανιστεί μόλις εγκριθεί.";
+    $("formMsg").className="formmsg";
+  }catch(e){ formErr("Η υποβολή δεν στάλθηκε. Δοκίμασε ξανά σε λίγο."); $("sendBtn").disabled=false; }
 }
-
-function subLine(s){
-  return s.kind==="event"
-    ? `${fmt(s.start)}${s.end?" – "+fmt(s.end):""}${s.time?" · "+s.time:""} · ${esc(s.venue)} · ${esc(s.organizer)}`
-    : `${esc(s.url)} · ${esc(s.organizer)}`;
+/* ---------- «Αναφορά λάθους» ---------- */
+let REP_EVENT=null;
+function openReport(id){
+  REP_EVENT=EVENTS.find(x=>String(x.id)===String(id)); if(!REP_EVENT) return;
+  $("repWhat").textContent=`${REP_EVENT.title} · ${REP_EVENT.start||""}${REP_EVENT.venue?" · "+REP_EVENT.venue:""}`;
+  $("r_issue").value="date"; $("r_msg").value=""; $("r_web").value=""; $("repMsg").textContent=""; $("repSend").disabled=false;
+  const d=$("repDlg"); if(d.showModal) d.showModal(); else d.setAttribute("open","");
 }
-function renderMine(){
-  const items=Object.values(MY.items||{}).sort((a,b)=>b.submittedAt.localeCompare(a.submittedAt));
-  $("mine").hidden=!items.length;
-  $("mineList").innerHTML=items.map(s=>{const st=SUBST[s.id]?.status||"pending";
-    return `<div class="sitem"><div><div class="k">${KINDNAME[s.kind]}</div><b>${esc(s.title||s.organizer)}</b><div class="m">${subLine(s)}${st==="rejected"&&SUBST[s.id]?.reason?`<br>Αιτία: ${esc(SUBST[s.id].reason)}`:""}</div></div><span class="st2 ${st}">${STNAME[st]}</span></div>`;}).join("");
-}
-
-function renderAdmin(){
-  if(!IS_ADMIN) return;
-  const withSt=ALLSUBS.map(s=>({...s,_st:SUBST[s.id]?.status||"pending"}));
-  const counts={pending:0,approved:0,rejected:0}; withSt.forEach(s=>counts[s._st]++);
-  $("adminLink").hidden=false; $("adminLink").textContent=`Διαχείριση · ${counts.pending} σε αναμονή`;
-  $("admin").hidden=false;
-  $("admTabs").innerHTML=Object.keys(counts).map(k=>`<button type="button" data-t="${k}" aria-selected="${k===ADM_TAB}">${STNAME[k]} (${counts[k]})</button>`).join("");
-  $("admTabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{ADM_TAB=b.dataset.t;renderAdmin();});
-  const rows=withSt.filter(s=>s._st===ADM_TAB).sort((a,b)=>a.submittedAt.localeCompare(b.submittedAt));
-  $("admList").innerHTML = rows.length ? rows.map(s=>{
-    const edit = s.kind==="event" && ADM_TAB==="pending" ? `<div class="ed">
-        <div><label>Τίτλος</label><input data-f="title" value="${esc(s.title)}"></div>
-        <div><label>Ημερομηνία</label><input data-f="start" type="date" value="${esc(s.start)}"></div>
-        <div><label>Έως</label><input data-f="end" type="date" value="${esc(s.end||"")}"></div>
-        <div><label>Ώρα</label><input data-f="time" type="time" value="${esc(s.time||"")}"></div>
-        <div><label>Χώρος</label><input data-f="venue" value="${esc(s.venue)}"></div>
-        <div><label>Κατηγορία</label><select data-f="category">${CATS.map(c=>`<option ${c===s.category?"selected":""}>${c}</option>`).join("")}</select></div>
-        <div><label>Περιοχή</label><select data-f="area"><option value="volos" ${s.area==="volos"?"selected":""}>Βόλος</option><option value="pelion" ${s.area==="pelion"?"selected":""}>Πήλιο</option></select></div>
-      </div>` : "";
-    const extra = s.kind==="rss" ? `<div class="m">Ημερομηνία: ${esc({text:"στο κείμενο",ev:"ev:startdate",unknown:"άγνωστο"}[s.dateHint]||"-")} · ${s.eventsOnly?"μόνο εκδηλώσεις":"αναμεικτό περιεχόμενο"}</div>`:"";
-    const btns = ADM_TAB==="pending"
-      ? `<button type="button" class="cta" data-a="approve">Έγκριση</button><input data-f="reason" placeholder="Αιτία απόρριψης (προαιρετικά)"><button type="button" class="cta ghost" data-a="reject">Απόρριψη</button>`
-      : `<button type="button" class="cta ghost" data-a="undo">Επαναφορά σε αναμονή</button>${SUBST[s.id]?.reason?`<span class="m">Αιτία: ${esc(SUBST[s.id].reason)}</span>`:""}`;
-    return `<div class="adm" data-id="${s.id}" data-uid="${s._uid}"><div class="k" style="font-size:12px;text-transform:uppercase;color:var(--muted);font-weight:600">${KINDNAME[s.kind]} · ${s.area==="pelion"?"Πήλιο":"Βόλος"} · ${new Date(s.submittedAt).toLocaleString("el-GR")}</div>
-      <b>${esc(s.title||s.organizer)}</b><div class="m">${subLine(s)}${s.link?` · <a href="${esc(s.link)}" target="_blank" rel="noopener">σύνδεσμος</a>`:""}${s.note?`<br>Σημείωση: ${esc(s.note)}`:""}</div>${extra}${edit}<div class="btns">${btns}</div></div>`;
-  }).join("") : `<p class="sub">Τίποτα εδώ.</p>`;
-  $("admList").querySelectorAll(".adm").forEach(card=>card.querySelectorAll("button[data-a]").forEach(b=>b.onclick=()=>adminAct(card,b.dataset.a)));
-}
-async function adminAct(card,action){
-  const id=card.dataset.id, s=ALLSUBS.find(x=>x.id===id); if(!s) return;
-  card.querySelectorAll("button").forEach(b=>b.disabled=true);
+function closeReport(){ const d=$("repDlg"); if(d.close) d.close(); else d.removeAttribute("open"); }
+async function sendReport(){
+  if($("r_web").value){ closeReport(); return; }                        // honeypot
+  const email=$("r_email").value.trim();
+  if(email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ $("repMsg").textContent="Το email δεν φαίνεται σωστό."; $("repMsg").className="formmsg err"; return; }
+  let recent=[]; try{ recent=JSON.parse(localStorage.getItem("volta-rep")||"[]").filter(t=>Date.now()-t<3600e3); }catch(e){}
+  if(recent.length>=10){ $("repMsg").textContent="Πολλές αναφορές την τελευταία ώρα."; $("repMsg").className="formmsg err"; return; }
+  const e=REP_EVENT, dbId=/^db\d+$/.test(String(e.id))?Number(String(e.id).slice(2)):null;
+  $("repSend").disabled=true;
   try{
-    if(action==="approve"){
-      const ed={}; card.querySelectorAll(".ed [data-f]").forEach(i=>ed[i.dataset.f]=i.value.trim());
-      if(s.kind==="event"){
-        const e={...s,...ed}; delete e._uid; delete e._st;
-        await DB.doc(`pub/v1/events/${id}`).set({title:e.title,start:e.start,end:e.end||"",time:e.time||"",venue:e.venue,address:e.address||"",
-          category:e.category,area:e.area,price:e.price||"",free:!!e.free,link:e.link||"",organizer:e.organizer,approvedAt:new Date().toISOString()});
-      } else {
-        await DB.doc(`pub/v1/feeds/${id}`).set({kind:s.kind,url:s.url,organizer:s.organizer,area:s.area,category:s.category,dateHint:s.dateHint||"",eventsOnly:!!s.eventsOnly,approvedAt:new Date().toISOString()});
-      }
-      await DB.doc(`pub/v1/status/${id}`).set({status:"approved",at:new Date().toISOString()});
-    } else if(action==="reject"){
-      const reason=card.querySelector('[data-f="reason"]')?.value.trim()||"";
-      await DB.doc(`pub/v1/status/${id}`).set({status:"rejected",reason,at:new Date().toISOString()});
-    } else if(action==="undo"){
-      await DB.doc(`pub/v1/events/${id}`).delete(); await DB.doc(`pub/v1/feeds/${id}`).delete();
-      await DB.doc(`pub/v1/status/${id}`).delete();
-    }
-  }catch(e){ card.querySelectorAll("button").forEach(b=>b.disabled=false); alert("Η ενέργεια δεν ολοκληρώθηκε."); }
+    const r=await fetch(`${SB_URL}/rest/v1/reports`,{method:"POST",
+      headers:{"apikey":SB_ANON,"Authorization":`Bearer ${SB_ANON}`,"Content-Type":"application/json","Prefer":"return=minimal"},
+      body:JSON.stringify({event_id:dbId, event_title:e.title.slice(0,300), event_date:e.start||null,
+        event_url:((e.sources[0]&&e.sources[0].url)||"").slice(0,500), issue:$("r_issue").value,
+        message:$("r_msg").value.trim()||null, contact_email:email||null})});
+    if(!r.ok) throw new Error(r.status);
+    try{ recent.push(Date.now()); localStorage.setItem("volta-rep",JSON.stringify(recent)); }catch(_){}
+    $("repMsg").textContent="Ευχαριστούμε! Θα το ελέγξουμε."; $("repMsg").className="formmsg";
+    setTimeout(closeReport,1400);
+  }catch(err){ $("repMsg").textContent="Δεν στάλθηκε. Δοκίμασε ξανά σε λίγο."; $("repMsg").className="formmsg err"; $("repSend").disabled=false; }
 }
-function pubToEvent(id,e){
-  return {id:"s"+id,title:e.title,start:e.start,end:e.end||null,time:e.time||null,venue:e.venue,category:e.category||"Άλλο",
-    area:e.area||"volos",price:e.free?"0":(e.price||"").replace("€","")||null,running:false,submitted:true,
-    sources:[{source:`Υποβολή: ${e.organizer}`,url:e.link||"#"}],method:"υποβολή"};
+if(SB_READY){
+  document.body.classList.add("can-report");
+  document.addEventListener("click",ev=>{ const b=ev.target.closest&&ev.target.closest(".replink"); if(b) openReport(b.dataset.id); });
+  $("repSend").onclick=sendReport;
+  $("repCancel").onclick=closeReport;
+  $("openSubmit").hidden=false;
+  $("openSubmit").onclick=()=>{$("submit").hidden=false; renderForm(); $("submit").scrollIntoView({behavior:"smooth"});};
+  document.querySelectorAll("#kinds button").forEach(b=>b.onclick=()=>{KIND=b.dataset.k;renderForm();});
 }
-function refreshEvents(){
-  const today=todayIso();
-  EVENTS = DATA.events.concat(PUB_EVENTS.filter(e=>(e.end||e.start)>=today));
-  renderStats(); renderTabs(); renderFilters(); renderList();
-}
-async function exportApproved(){
-  const dl=await claude.use("downloads");
-  const events=PUB_EVENTS.map(e=>({title:e.title,start:e.start,end:e.end,time:e.time,venue:e.venue,area:e.area,category:e.category,
-    price:e.price==="0"?"":e.price,free:e.price==="0",link:e.sources[0].url==="#"?"":e.sources[0].url,organizer:e.sources[0].source.replace("Υποβολή: ","")}));
-  const data=JSON.stringify({exported:new Date().toISOString(),events,feeds:PUB_FEEDS},null,2);
-  if(!dl){ $("exportMsg").textContent="Η λήψη αρχείων δεν είναι διαθέσιμη εδώ."; return; }
-  try{ await dl.save({filename:"submissions.json",data}); $("exportMsg").textContent="Αποθηκεύτηκε. Βάλε το αρχείο δίπλα στο aggregator.py."; }
-  catch(e){ $("exportMsg").textContent="Η αποθήκευση ακυρώθηκε."; }
-}
-
-(async()=>{
-  if(typeof claude==="undefined"||!claude.use) return;
-  DB=await claude.use("db"); USER=await claude.use("user");
-  if(!DB) return;
-  // public: approved events and statuses
-  DB.collection("pub/v1/events").onSnapshot(q=>{PUB_EVENTS=q.docs.map(d=>pubToEvent(d.id,d.data()));refreshEvents();},()=>{});
-  DB.collection("pub/v1/status").onSnapshot(q=>{SUBST={};q.docs.forEach(d=>SUBST[d.id]=d.data());renderMine();renderAdmin();},()=>{});
-  if(!USER) return;
-  UID=await USER.id(); IS_ADMIN=await USER.canEdit();
-  const canWrite=await USER.can("data.write");
-  if(UID && canWrite!==false){
-    $("openSubmit").hidden=false;
-    $("openSubmit").onclick=()=>{$("submit").hidden=false; renderForm(); $("submit").scrollIntoView({behavior:"smooth"});};
-    document.querySelectorAll("#kinds button").forEach(b=>b.onclick=()=>{KIND=b.dataset.k;renderForm();});
-    DB.doc(`data/users/${UID}`).onSnapshot(s=>{MY=s.exists?s.data():{items:{}};renderMine();},()=>{});
-  }
-  if(IS_ADMIN){
-    DB.collection("data/users").onSnapshot(q=>{
-      ALLSUBS=[]; q.docs.forEach(d=>Object.values(d.data().items||{}).forEach(it=>ALLSUBS.push({...it,_uid:d.id})));
-      renderAdmin();},()=>{});
-    DB.collection("pub/v1/feeds").onSnapshot(q=>{PUB_FEEDS=q.docs.map(d=>({id:d.id,...d.data()}));},()=>{});
-    $("exportBtn").onclick=exportApproved;
-    renderAdmin();
-  }
-})();
 </script>
 </body>
 </html>

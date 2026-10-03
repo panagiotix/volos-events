@@ -33,6 +33,9 @@ jobs:
         env:
           LIVE: "1"
           TZ: Europe/Athens
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}           # public: goes into the page (form)
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}     # secret: pipeline only, never in the page
         run: python build_site.py
 
       - name: Log στη σύνοψη της εκτέλεσης

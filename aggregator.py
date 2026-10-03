@@ -779,8 +779,14 @@ def collect_submissions(path=None):
     """Approved submissions exported from the admin page (submissions.json):
     single events go straight in; approved iCal/RSS feeds are fetched and parsed."""
     path = path or f"{HERE}/submissions.json"
-    if not os.path.exists(path): return []
-    data = json.load(open(path, encoding="utf-8"))
+    data = json.load(open(path, encoding="utf-8")) if os.path.exists(path) else {}
+    try:
+        import supa
+        if supa.enabled():                      # approved feeds now live in Supabase
+            data["feeds"] = supa.approved_feeds()
+    except Exception as ex:
+        SOURCE_ERRORS.append(f"- Supabase: τα εγκεκριμένα feeds δεν διαβάστηκαν ({type(ex).__name__}: {ex})")
+    if not data: return []
     out = []
     for e in data.get("events", []):
         out.append(rec("Υποβολή", e.get("link") or "#", e["title"], e["start"], e.get("end") or None, e.get("time") or None,
