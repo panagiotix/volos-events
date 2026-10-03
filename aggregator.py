@@ -733,7 +733,9 @@ def write_log(raw, events, rejected):
     missing = sorted({w for _, ws in CASING_LOG for w in ws})
     L += [f"- {t} — λείπουν: {', '.join(ws)}" for t, ws in CASING_LOG] or ["- Κανένας."]
     if missing: L += ["", "Όλες μαζί: " + " ".join(missing)]
-    L += ["", "## Υποβολές και feeds διοργανωτών", ""] + (FEED_LOG or ["- Καμία εγκεκριμένη υποβολή feed σε αυτή την εκτέλεση."])
+    L += ["", "## Feeds διοργανωτών (iCal / RSS)", "",
+          "Οι μεμονωμένες εκδηλώσεις από υποβολές δεν εμφανίζονται εδώ· μετρώνται στην ενότητα «Supabase» στο τέλος."]
+    L += [""] + (FEED_LOG or ["- Κανένα εγκεκριμένο feed."])
     L += ["", "## Κατάσταση πηγών", "", "| Κατάσταση | Πηγή | Σημείωση |", "|---|---|---|"]
     for x in SOURCES:
         name = f"[{x['name']}]({x['url']})" if x["url"] else x["name"]

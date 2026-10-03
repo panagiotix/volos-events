@@ -123,15 +123,24 @@ def from_row(r):
         "running": False, "past": False, "method": "parser", "note": None,
     }
 
+PULL_STATS = {"submitted": 0, "own": 0, "total": 0}
+
 def pull_public(today):
     """Current and future published events, with your hide/override decisions applied."""
     if not enabled(): return None
-    since = local_to_utc_iso((today - timedelta(days=1)).isoformat(), "00:00")
+    # "Z" instead of "+00:00": a "+" inside a URL is read as a space and the filter would fail
+    since = local_to_utc_iso((today - timedelta(days=1)).isoformat(), "00:00").replace("+00:00", "Z")
     rows = _req("GET", "public_events?select=*&or=(starts_at.gte.{0},ends_at.gte.{0})&order=starts_at&limit=2000".format(since))
     out = []
+    PULL_STATS.update(submitted=0, own=0, total=0)
     for r in rows or []:
         e = from_row(r)
-        if (e["end"] or e["start"]) >= today.isoformat(): out.append(e)
+        if (e["end"] or e["start"]) < today.isoformat(): continue
+        out.append(e)
+        ext = str(r.get("external_id") or "")
+        PULL_STATS["total"] += 1
+        if ext.startswith("sub-"): PULL_STATS["submitted"] += 1
+        if ext.startswith("admin-"): PULL_STATS["own"] += 1
     return out
 
 def approved_feeds():

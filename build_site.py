@@ -26,7 +26,9 @@ if supa.enabled():
                          "Η σελίδα χτίστηκε από τη συλλογή· έλεγξε το view public_events.")
         else:
             data["events"] = films + published
-            supa_note = f"Supabase: {n} εκδηλώσεις στάλθηκαν, {len(published)} δημοσιευμένες διαβάστηκαν πίσω"
+            st = supa.PULL_STATS
+            supa_note = (f"Supabase: {n} εκδηλώσεις στάλθηκαν, {len(published)} δημοσιευμένες διαβάστηκαν πίσω "
+                         f"(από αυτές {st['submitted']} από εγκεκριμένες υποβολές, {st['own']} δικές σου)")
     except Exception as ex:                            # Supabase down/paused: keep the collected events
         supa_note = f"Supabase: σφάλμα ({type(ex).__name__}: {ex}) — η σελίδα χτίστηκε από τη συλλογή"
 if supa.enabled(): supa_note += f" · κλειδί workflow: {supa.key_role()}"
