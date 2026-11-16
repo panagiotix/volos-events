@@ -6,7 +6,7 @@ Volos & Pelion events aggregator — structured sources only (no LLM).
 
 Snapshots are the pages as fetched on 29 Sept 2026; in production fetch() downloads the URLs.
 """
-import json, re, os, hashlib, unicodedata, urllib.request
+import json, re, os, hashlib, html as _html, unicodedata, urllib.request
 from feeds import parse_ics, parse_rss
 import casing
 from datetime import date
@@ -130,8 +130,21 @@ def classify(text):
     return "unknown"
 
 # ------------------------------------------------------------------ record
+def unent(s):
+    """&quot; &amp; &#39; … → real characters (some sources encode twice: &amp;quot;)."""
+    s = s or ""
+    for _ in range(3):
+        t = _html.unescape(s)
+        if t == s: break
+        s = t
+    return re.sub(r"\s+", " ", s).strip()
+
 def rec(source, url, title, start, end=None, time=None, venue_text="", price=None, category="Άλλο", context="", running=False, note=None):
-    return dict(source=source, url=url, title=title.strip(), start=start, end=end, time=time, venue_text=venue_text,
+    title, venue_text = unent(title), unent(venue_text)
+    short = re.sub(r"\s+@\s?[^@]+$", "", title).strip(" •-–")   # "… @Cafe Santan": the venue has its own field
+    if len(short) >= 5: title = short
+    context = unent(context)
+    return dict(source=source, url=url, title=title, start=start, end=end, time=time, venue_text=venue_text,
                 price=price, category=category, context=context or f"{title} {venue_text}", running=running, note=note)
 
 # ------------------------------------------------------------------ collectors

@@ -19,7 +19,8 @@ if supa.enabled():
     try:
         today = date.fromisoformat(data["generated"])
         n = supa.push_events(data["events"])
-        published = supa.pull_public(today)
+        stale = supa.retire_stale(today)               # rows this run didn't send again → no duplicates
+        published = supa.pull_public(today, exclude=stale)
         films = [e for e in data["events"] if e.get("running")]
         if n and len(published) < n * 0.5:             # far fewer than we sent: something is wrong, don't empty the page
             supa_note = (f"Supabase: ΠΡΟΣΟΧΗ — στάλθηκαν {n} αλλά διαβάστηκαν πίσω μόνο {len(published)}. "
@@ -28,7 +29,11 @@ if supa.enabled():
             data["events"] = films + published
             st = supa.PULL_STATS
             supa_note = (f"Supabase: {n} εκδηλώσεις στάλθηκαν, {len(published)} δημοσιευμένες διαβάστηκαν πίσω "
-                         f"(από αυτές {st['submitted']} από εγκεκριμένες υποβολές, {st['own']} δικές σου)")
+                         f"(από αυτές {st['submitted']} από εγκεκριμένες υποβολές, {st['own']} δικές σου). "
+                         f"Παλιές εγγραφές που δεν ξαναβρέθηκαν: {st['stale_deleted']} διαγράφηκαν, "
+                         f"{st['carried']} μετέφεραν τις διορθώσεις/αφαιρέσεις σου στη νέα εγγραφή, "
+                         f"{st['stale_kept']} κρατήθηκαν κρυφές (έχουν διορθώσεις σου αλλά η πηγή δεν τις δίνει πια). "
+                         f"Συγχωνεύσεις δικών σου/υποβολών με συλλεγμένες: {st['merged']}")
     except Exception as ex:                            # Supabase down/paused: keep the collected events
         supa_note = f"Supabase: σφάλμα ({type(ex).__name__}: {ex}) — η σελίδα χτίστηκε από τη συλλογή"
 if supa.enabled(): supa_note += f" · κλειδί workflow: {supa.key_role()}"

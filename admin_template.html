@@ -27,6 +27,7 @@ h1{font:400 40px/1.1 "GFS Didot",Georgia,serif;color:var(--gulf);margin:0 0 4px}
 .btn:focus-visible,.tabs button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--kiln);outline-offset:2px}
 .card{border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:10px 0;background:var(--panel)}
 .card.hidden{opacity:.6}
+.card.dirty{border-color:#c98a00;box-shadow:inset 3px 0 0 #c98a00}
 .k{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600}
 .m{font-size:14px;color:var(--muted);word-break:break-word}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
@@ -77,7 +78,9 @@ function say(t,cls){ $("msg").textContent=t||""; $("msg").className="msg"+(cls?"
 async function start(){
   if(!SB_URL.startsWith("https://")||typeof supabase==="undefined"){ $("cfgMsg").hidden=false; return; }
   sb=supabase.createClient(SB_URL,SB_ANON);
-  sb.auth.onAuthStateChange(()=>route());
+  let who;   /* supabase-js reports SIGNED_IN / TOKEN_REFRESHED whenever the browser tab regains focus:
+               re-render only when the user really changes, otherwise typed text would be wiped */
+  sb.auth.onAuthStateChange((ev,session)=>{ const u=session?.user?.id||null; if(u===who) return; who=u; route(); });
   route();
 }
 async function route(){
@@ -163,6 +166,21 @@ function diffOverrides(e,f){
   return o;
 }
 let EV_FILTER="published", EV_PREFILL="";
+/* Drafts: what you typed is kept in memory and in this browser (sessionStorage) until you publish/save,
+   so switching admin tabs, typing in the search box or reloading does not erase it. */
+const DRAFT_KEY="volta-admin-drafts";
+let DRAFTS=(()=>{ try{ return JSON.parse(sessionStorage.getItem(DRAFT_KEY))||{}; }catch(_){ return {}; } })();
+function saveDrafts(){ try{ sessionStorage.setItem(DRAFT_KEY,JSON.stringify(DRAFTS)); }catch(_){} }
+function keepDraft(key,root,attr){
+  const f={}; root.querySelectorAll(`[${attr}]`).forEach(i=>f[i.getAttribute(attr)]=i.value);
+  DRAFTS[key]=f; saveDrafts();
+}
+function restoreDraft(key,root,attr){
+  const f=DRAFTS[key]; if(!f) return false;
+  root.querySelectorAll(`[${attr}]`).forEach(i=>{ const k=i.getAttribute(attr); if(k in f) i.value=f[k]; });
+  return true;
+}
+function dropDraft(key){ delete DRAFTS[key]; saveDrafts(); }
 async function renderEvents(){
   const since=new Date(Date.now()-864e5).toISOString();
   const {data,error}=await sb.from("events").select("id,external_id,title,description,starts_at,ends_at,all_day,venue,region,category,price,url,status,overrides,sources")
@@ -181,12 +199,18 @@ async function renderEvents(){
         <div style="grid-column:1/-1"><label>Σύνδεσμος</label><input data-n="url" type="url" placeholder="https://"></div>
         <div style="grid-column:1/-1"><label>Περιγραφή (προαιρετική)</label><input data-n="description"></div>
       </div>
-      <div class="row"><button class="btn main" id="addEv" type="button">Δημοσίευση</button></div></details>
+      <div class="row"><button class="btn main" id="addEv" type="button">Δημοσίευση</button>
+        <button class="btn" id="clrEv" type="button">Καθαρισμός φόρμας</button>
+        <span class="m">Ό,τι γράφεις κρατιέται μέχρι να το δημοσιεύσεις, ακόμη κι αν αλλάξεις καρτέλα.</span></div></details>
     <div class="row" style="margin:0 0 6px">
       <input id="q" placeholder="Αναζήτηση τίτλου ή χώρου" style="max-width:320px">
       <select id="vis" style="max-width:220px"><option value="published">Στη σελίδα</option><option value="hidden">Αφαιρεμένες</option><option value="all">Όλες</option></select>
       <span class="m" id="cnt"></span></div><div id="evs"></div>`;
   $("vis").value=EV_FILTER; $("q").value=EV_PREFILL; EV_PREFILL="";
+  const nev=$("newEv");
+  if(restoreDraft("new",nev,"data-n")){ nev.open=true; }
+  nev.addEventListener("input",()=>keepDraft("new",nev,"data-n"));
+  nev.addEventListener("change",()=>keepDraft("new",nev,"data-n"));
   const draw=()=>{
     const q=$("q").value.toLowerCase();
     const rows=data.filter(e=>(EV_FILTER==="all"||e.status===EV_FILTER) && (!q||(e.title+" "+(e.venue||"")+" "+JSON.stringify(e.overrides||{})).toLowerCase().includes(q)));
@@ -210,13 +234,19 @@ async function renderEvents(){
           ${changed?'<button class="btn" data-a="reset">Επαναφορά αρχικών στοιχείων</button>':""}
           <button class="btn ${e.status==="hidden"?"":"danger"}" data-a="toggle">${e.status==="hidden"?"Επαναφορά στη σελίδα":"Αφαίρεση από τη σελίδα"}</button>
           ${String(e.external_id||"").startsWith("admin-")?'<button class="btn danger" data-a="delete">Οριστική διαγραφή</button>':""}</div></div>`;}).join("")||'<p class="m">Τίποτα.</p>';
+    $("evs").querySelectorAll(".card").forEach(c=>{
+      const k="ev"+c.dataset.id;
+      if(restoreDraft(k,c,"data-f")) c.classList.add("dirty");
+      const track=()=>{ keepDraft(k,c,"data-f"); c.classList.add("dirty"); };
+      c.addEventListener("input",track); c.addEventListener("change",track);
+    });
     $("evs").querySelectorAll(".card").forEach(c=>c.querySelectorAll("button").forEach(b=>b.onclick=async()=>{
       const id=+c.dataset.id, e=data.find(x=>x.id===id); let upd;
       if(b.dataset.a==="delete"){
         if(!confirm("Οριστική διαγραφή αυτής της εκδήλωσης;")) return;
         const {error}=await sb.from("events").delete().eq("id",id);
         if(error) return say(error.message,"err");
-        data.splice(data.indexOf(e),1); say("Διαγράφηκε.","ok"); return draw();
+        data.splice(data.indexOf(e),1); dropDraft("ev"+id); say("Διαγράφηκε.","ok"); return draw();
       }
       if(b.dataset.a==="toggle") upd={status:e.status==="hidden"?"published":"hidden"};
       else if(b.dataset.a==="reset") upd={overrides:{}};
@@ -231,6 +261,7 @@ async function renderEvents(){
       b.disabled=false;
       if(error) return say(error.message,"err");
       Object.assign(e,upd);
+      if(b.dataset.a!=="toggle") dropDraft("ev"+id);
       say(b.dataset.a==="toggle"?(e.status==="hidden"?"Αφαιρέθηκε από τη σελίδα.":"Επανήλθε στη σελίδα."):"Αποθηκεύτηκε.","ok"); draw();
     }));
   };
@@ -249,8 +280,10 @@ async function renderEvents(){
     if(error) return say(error.message,"err");
     data.push(ins); data.sort((a,b)=>a.starts_at.localeCompare(b.starts_at));
     document.querySelectorAll("#newEv [data-n]").forEach(i=>{ if(i.tagName==="INPUT") i.value=""; });
+    dropDraft("new");
     $("newEv").open=false; say("Δημοσιεύτηκε. Θα εμφανιστεί στη σελίδα με την επόμενη ανανέωση.","ok"); draw();
   };
+  $("clrEv").onclick=()=>{ document.querySelectorAll("#newEv [data-n]").forEach(i=>{ if(i.tagName==="INPUT") i.value=""; }); dropDraft("new"); };
   $("q").oninput=draw; $("vis").onchange=()=>{EV_FILTER=$("vis").value;draw();}; draw();
 }
 
